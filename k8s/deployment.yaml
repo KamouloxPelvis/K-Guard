@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k-guard-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k-guard
+  template:
+    metadata:
+      labels:
+        app: k-guard
+    spec:
+      containers:
+      - name: backend
+        image: 113.30.191.17:5000/k-guard-backend:latest # En supposant mon registry local
+        ports:
+        - containerPort: 8000
+        env:
+        - name: KUBECONFIG
+          value: "/app/config" # Pour que FastAPI parle à K3s
+      - name: frontend
+        image: 113.30.191.17:5000/k-guard-frontend:latest
+        ports:
+        - containerPort: 5173

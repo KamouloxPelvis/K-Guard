@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k-guard-ingress
+  annotations:
+    # kubernetes.io/ingress.class: nginx ### Déprécié ###
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: k-guard.devopsnotes.org
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: k-guard-service
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: k-guard-service
+            port:
+              number: 80
