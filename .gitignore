@@ -1,0 +1,9 @@
+blog-devopsnotes/
+portfolio-portal/
+app-devopsnotes/
+*.tar
+.env
+node_modules/
+__pycache__/
+dist/
+EOF
