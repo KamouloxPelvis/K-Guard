@@ -1,5 +1,7 @@
 import os
-import bcrypt  # Remplaçant de passlib pour la compatibilité
+import bcrypt
+
+from security_manager import run_trivy_scan
 from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +11,9 @@ from jose import JWTError, jwt
 from dotenv import load_dotenv
 
 from k3s_manager import get_k3s_status 
+from fastapi import HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 
 # Chargement des variables d'environnement
 load_dotenv()
@@ -46,25 +51,29 @@ def verify_password(plain_password, hashed_password):
         hashed_password.encode('utf-8')
     )
 
-def verify_token(token: str = Depends(oauth2_scheme)):
-    """Vérifie si le token est valide pour protéger les routes"""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Session expirée ou invalide",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+security = HTTPBearer()
+
+async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    token = credentials.credentials
     try:
+        # Affiche le début du token reçu pour comparer avec le front
+        print(f"DEBUG BACKEND - Reçu: {token[:10]}...") 
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+        return payload
+    except jwt.ExpiredSignatureError:
+        print("ERREUR: Le token a expiré !")
+        raise HTTPException(status_code=401, detail="Token expiré")
+    except jwt.JWTError as e:
+        print(f"ERREUR JWT: {str(e)}") # C'est CA qu'on veut voir dans ta console Python
+        raise HTTPException(status_code=401, detail=f"Erreur signature: {str(e)}")
+    except Exception as e:
+        print(f"ERREUR INCONNUE: {str(e)}")
+        raise HTTPException(status_code=401, detail="Erreur validation")
 
 # --- ROUTES AUTH ---
 @app.post("/api/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # On vérifie les identifiants contre le .env
+    
     if form_data.username != ADMIN_PSEUDO or not verify_password(form_data.password, ADMIN_HASH):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,20 +84,38 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = jwt.encode({"sub": form_data.username, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
     return {"access_token": access_token, "token_type": "bearer"}
 
+# --- ROUTES TRIVY --- 
+@app.post("/api/security/scan")
+async def security_scan(payload: dict, user: dict = Depends(verify_token)):
+    # Ici, 'user' contient maintenant ton payload {'sub': 'Kamal', 'exp': ...}
+    image_name = payload.get("image") 
+    
+    if not image_name:
+        raise HTTPException(status_code=400, detail="La clé 'image' est manquante dans le payload")
+        
+    return run_trivy_scan(image_name)
+
 # --- ROUTES K3S ---
 @app.get("/api/k3s/health")
 async def get_cluster_health():
     return get_k3s_status()
 
 @app.get("/api/k3s/logs/{namespace}/{pod_name}")
-async def get_pod_logs(namespace: str, pod_name: str, container: str = None, token: str = Depends(verify_token)):
+async def get_logs(namespace: str, pod_name: str):
     try:
-        params = {"name": pod_name, "namespace": namespace, "tail_lines": 100}
-        if container: params["container"] = container
-        logs = v1.read_namespaced_pod_log(**params)
+        # On définit quel conteneur on veut inspecter par défaut
+        # Pour le blog, c'est "blog-backend"
+        container_target = "blog-backend" if "blog" in pod_name else None
+        
+        logs = v1.read_namespaced_pod_log(
+            name=pod_name,
+            namespace=namespace,
+            container=container_target, # On précise le conteneur ici !
+            tail_lines=100
+        )
         return {"logs": logs}
     except Exception as e:
-        return {"error": str(e)}
+        return {"logs": f"ERROR: Unable to fetch logs for {pod_name}. {str(e)}"}
 
 @app.delete("/api/k3s/restart/{namespace}/{pod_name}")
 async def restart_pod(namespace: str, pod_name: str, token: str = Depends(verify_token)):

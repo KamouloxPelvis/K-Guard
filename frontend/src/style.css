@@ -1,13 +1,141 @@
-@import "tailwindcss";
+  @import "tailwindcss";
 
-@font-face {
-  font-family: 'Valorant';
-  src: url('/fonts/Valorant.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
+  /* --- Typographie & Branding --- */
+  @font-face {
+    font-family: 'Valorant';
+    src: url('/fonts/Valorant.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
 
-.font-valorant {
-  font-family: 'Valorant', sans-serif !important;
-  text-transform: uppercase;
-}
+  .font-valorant {
+    font-family: 'Valorant', sans-serif !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .k-guard-orange {
+      color: #f05a28;
+  }
+
+  .k-guard-gradient {
+      background: linear-gradient(135deg, #f05a28 0%, #7c2d12 100%);
+  }
+
+  /* --- Global Overrides --- */
+  :root {
+      color-scheme: dark;
+      --k-bg-dark: #0b0c10;
+      --k-bg-card: #111217;
+      --k-border: rgba(255, 255, 255, 0.08);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--k-bg-dark);
+    color: #94a3b8; /* slate-400 */
+    -webkit-font-smoothing: antialiased;
+    overflow-x: auto;
+  }
+
+  /* --- Modals & Overlays (Focus Sécurité) --- */
+  .vulnerability-modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  /* --- Responsive & Sidebar Logic --- */
+
+  /* Transition fluide pour tout le layout */
+  aside, img, main, .grid {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Tablettes et mobiles (Largeur < 1024px) */
+  @media (max-width: 1024px) {
+    .ml-64 { 
+      margin-left: 0 !important; 
+    }
+    
+    /* Ajustement du Watermark pour la lisibilité */
+    .fixed.inset-0 img {
+      width: 280px !important;
+      opacity: 0.03 !important;
+      filter: grayscale(1) brightness(0.5);
+    }
+
+    /* Sidebar masquée par défaut sur tablette */
+    aside {
+      box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+    }
+  }
+
+  /* Mobiles uniquement (< 640px) */
+  @media (max-width: 640px) {
+    .p-8 { 
+      padding: 1.25rem !important; 
+    }
+    
+    h1 { 
+      font-size: 1.75rem !important; 
+      line-height: 1.2;
+    }
+
+    /* On force le stack vertical pour les stats */
+    .grid-cols-2 { 
+      grid-template-columns: 1fr !important; 
+    }
+
+    /* Optimisation des cartes pour petits écrans */
+    .group.relative {
+      padding: 1.25rem !important;
+    }
+  }
+
+  /* --- Utilitaires Devops --- */
+
+  /* Scrollbar fine style Terminal */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--k-bg-dark);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #f05a28;
+  }
+
+  /* Effet de scanline pour le côté "NOC" */
+  .scanline-effect {
+    position: relative;
+    overflow: auto;
+  }
+
+  .scanline-effect::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(240, 90, 40, 0.02) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+  }

@@ -1,14 +1,12 @@
 from kubernetes import client, config
 import os
 
-def get_k3s_status():
+def get_k3s_status():   
     try:
-        # En local, on utilise le fichier kubeconfig
-        # Sur le VPS, on pourra utiliser config.load_incluster_config()
+        # Configuration de l'accès au cluster
         config.load_kube_config() 
         v1 = client.CoreV1Api()
         
-        # On cible les namespaces ou noms d'apps existant dans le vps
         apps_to_watch = ["blog-devopsnotes", "portfolio-portal"]
         pod_results = []
 
@@ -24,6 +22,8 @@ def get_k3s_status():
                         "ip": pod.status.pod_ip,
                         "type": "k3s Pod"
                     })
-        return pod_results
+        return pod_results 
+
     except Exception as e:
+        # On aligne bien le except avec le try
         return [{"name": "Cluster", "status": "ALERT", "path": str(e), "type": "Error"}]

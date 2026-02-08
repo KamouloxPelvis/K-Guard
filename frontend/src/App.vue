@@ -3,12 +3,9 @@
 </template>
 
 <script setup>
+// Pas de logique ici pour l'instant
 </script>
 
 <style>
-body {
-  margin: 0;
-  background-color: #0b0c10;
-  color: white;
-}
+/* On laisse style.css gérer le global pour éviter les conflits */
 </style>

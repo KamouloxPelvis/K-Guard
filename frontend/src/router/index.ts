@@ -1,36 +1,35 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import Login from '../views/Login.vue';
-import Dashboard from '../views/Dashboard.vue';
+import { createRouter, createWebHistory } from 'vue-router'
+import Dashboard from '../views/Dashboard.vue'
+import HealthView from '../views/HealthView.vue'
+import SecurityView from '../views/SecurityView.vue'
 
-const routes: Array<RouteRecordRaw> = [
+const routes = [
+  {
+    path: '/',
+    component: Dashboard, // Le Dashboard sert de base (Layout)
+    children: [
+      {
+        path: '', // Route par défaut (/)
+        name: 'Health',
+        component: HealthView
+      },
+      {
+        path: 'security', // Route (/security)
+        name: 'Security',
+        component: SecurityView
+      }
+    ]
+  },
   {
     path: '/login',
     name: 'Login',
-    component: Login
-  },
-  {
-    path: '/',
-    name: 'Dashboard',
-    component: Dashboard,
-    meta: { requiresAuth: true }
+    component: () => import('../views/LoginView.vue')
   }
-];
+]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
-});
+})
 
-router.beforeEach((to, _from, next) => {
-  const isAuthenticated = !!localStorage.getItem('user_token');
-
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next({ name: 'Login' });
-  } else if (to.name === 'Login' && isAuthenticated) {
-    next({ name: 'Dashboard' });
-  } else {
-    next();
-  }
-});
-
-export default router;
+export default router

@@ -1,212 +1,226 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
-interface PodStatus {
-  name: string;      
-  pod_name: string;  
-  status: string;    
-  ip: string;        
-  type: string;
-  namespace: string;      
+interface SystemInfo {
+  cluster_version: string;
+  vps_os: string;
+  uptime: string;
+  latency: string;
 }
-
-const apps = ref<PodStatus[]>([]);
-const loading = ref(true);
-const selectedPod = ref<PodStatus | null>(null);
-const podLogs = ref("");
-const showModal = ref(false);
-
-// Récupération dynamique de l'URL et du Token
-const getBaseURL = () => import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const getAuthHeader = () => {
-  const token = localStorage.getItem('user_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
-const fetchClusterData = async () => {
-  if (apps.value.length === 0) loading.value = true; 
-  
+const systemLatency = ref<number>(0);
+const vpsProvider = ref<string>("Detecting...");
+const clusterInfo = ref<string>("Fetching...");
+      
+const updateSystemStats = async () => {
+  const start = Date.now();
   try {
-    // La route health peut rester publique ou être protégée
-    const response = await axios.get(`${getBaseURL()}/api/k3s/health`, {
-      headers: getAuthHeader()
+    const response = await fetch('/api/k3s/health', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('user_token')}` }
     });
-    apps.value = response.data;
-    console.log("K-Guard Update Success");
-  } catch (error: any) {
-    console.error("Fetch Error:", error);
-    // Optionnel : redirection si 401
-    if (error.response?.status === 401) window.location.href = '/login';
-  } finally {
-    loading.value = false;
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      systemLatency.value = Date.now() - start;
+      vpsProvider.value = data.provider;
+      clusterInfo.value = data.cluster_version; 
+    }
+  } catch (e) {
+    console.error("Impossible de joindre le backend");
+    systemLatency.value = 0;
   }
 };
 
-const openDetails = async (pod: PodStatus) => {
-  selectedPod.value = pod;
-  showModal.value = true;
-  podLogs.value = "FETCHING ENCRYPTED LOGS...";
-  
-  try {
-    const response = await axios.get(
-      `${getBaseURL()}/api/k3s/logs/${pod.namespace}/${pod.pod_name}`,
-      { headers: getAuthHeader() } // Injection du token indispensable ici
-    );
-    podLogs.value = response.data.logs || "No logs found in standard output.";
-  } catch (error) {
-    podLogs.value = "ERROR: Connection to cluster lost.";
-  }
-};
+let statsInterval: any;
+onMounted(() => {
+  updateSystemStats();
+  statsInterval = setInterval(updateSystemStats, 30000);
+});
 
-const restartPod = async (event: Event, pod: PodStatus) => {
-  event.stopPropagation(); 
-  if (!confirm(`Confirm hard restart for ${pod.pod_name}?`)) return;
-  
+onUnmounted(() => {
+  clearInterval(statsInterval);
+});
+
+
+const systemData = ref<SystemInfo | null>(null);
+
+const pseudo = ref<string>(localStorage.getItem('admin_pseudo') || 'Admin');
+const isMenuOpen = ref(false);
+
+const route = useRoute();
+const router = useRouter();
+
+const pageTitle = computed(() => {
+  if (route.path === '/') return 'System Monitoring';
+  if (route.path === '/security') return 'Vulnerability Audit';
+  return 'Dashboard';
+});
+
+const fetchSystemInfo = async () => {
   try {
-    await axios.delete(
-      `${getBaseURL()}/api/k3s/restart/${pod.namespace}/${pod.pod_name}`,
-      { headers: getAuthHeader() } // Protection de la commande de restart
-    );
-    alert("Instruction sent to K3s controller.");
-    await fetchClusterData(); 
+    const token = localStorage.getItem('user_token');
+    const response = await axios.get('/api/k3s/status', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    systemData.value = response.data;
   } catch (error) {
-    alert("Command failed : Unauthorized or Network error.");
+    console.error("Impossible de récupérer les infos du cluster", error);
   }
 };
 
 onMounted(() => {
-  fetchClusterData();
-  // Update toutes les 10s pour garder un œil sur le cluster
-  setInterval(fetchClusterData, 10000); 
+  fetchSystemInfo();
 });
+
+const handleLogout = () => {
+  localStorage.removeItem('token'); 
+  router.push('/login');
+};
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#0b0c10] text-slate-300 font-sans flex overflow-hidden">
+  <div class="min-h-screen bg-[#0b0c10] text-slate-300 font-sans flex overflow-auto">
     
-    <aside class="w-64 bg-[#111217] border-r border-slate-800 flex flex-col shrink-0">
-      <div class="h-[64px] px-6 flex items-center gap-3 border-b border-slate-800">
-        <img src="/logo_small.png" alt="K-Guard" class="w-8 h-8 object-contain" />
-        <span class="text-[#f05a28] font-valorant text-xl tracking-widest mt-1">
-          K-GUARD
+    <Transition name="fade">
+      <div v-if="isMenuOpen" 
+           @click="isMenuOpen = false" 
+           class="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-md">
+      </div>
+    </Transition>
+
+    <aside :class="[
+      isMenuOpen ? 'translate-x-0' : '-translate-x-full',
+      'fixed lg:relative z-50 h-full bg-[#0d0e12] border-r border-slate-800/60 flex flex-col shrink-0 transition-all duration-500 ease-in-out w-72 lg:translate-x-0 md:w-20 lg:w-72'
+    ]">
+      
+      <div class="h-20 px-6 md:px-0 md:justify-center lg:px-8 flex items-center gap-4 border-b border-slate-800/50 bg-[#111217]">
+        <div class="w-10 h-10 bg-gradient-to-br from-[#f05a28] to-red-900 rounded-sm flex items-center justify-center shadow-lg shadow-red-900/20">
+            <span class="text-white font-valorant text-2xl mt-1">K</span>
+        </div>
+        <span class="hidden lg:block text-white font-valorant text-xl tracking-[0.2em] mt-1 group">
+          K-<span class="text-[#f05a28] group-hover:text-white transition-colors">GUARD</span>
         </span>
       </div>
       
-      <nav class="flex-1 p-4 space-y-2">
-        <div class="bg-slate-800 text-white p-3 rounded-sm text-sm font-medium cursor-default flex items-center gap-2">
-          <span>📊</span> Health & Logs
-        </div>
-        <div class="p-3 text-slate-500 text-sm cursor-not-allowed flex items-center gap-2">
-          <span>🔒</span> Security
-        </div>
+      <nav class="flex-1 p-4 md:p-3 lg:p-6 space-y-4 mt-4">
+        <router-link to="/" 
+          @click="isMenuOpen = false"
+          class="nav-link"
+          :class="route.path === '/' ? 'nav-active' : 'nav-inactive'">
+          <span class="text-xl">📊</span>
+          <div class="flex flex-col md:hidden lg:flex">
+            <span class="text-[11px] font-bold uppercase tracking-widest">Health & Logs</span>
+            <span class="text-[8px] text-slate-500 font-mono mt-0.5 uppercase">K3s Cluster Status</span>
+          </div>
+        </router-link>
+
+        <router-link to="/security" 
+          @click="isMenuOpen = false"
+          class="nav-link"
+          :class="route.path === '/security' ? 'nav-active' : 'nav-inactive'">
+          <span class="text-xl">🔒</span>
+          <div class="flex flex-col md:hidden lg:flex">
+            <span class="text-[11px] font-bold uppercase tracking-widest">Security Audit</span>
+            <span class="text-[8px] text-slate-500 font-mono mt-0.5 uppercase">Trivy Image Scan</span>
+          </div>
+        </router-link>
       </nav>
 
-      <div class="p-4 border-t border-slate-800 text-[10px] text-slate-500 font-mono text-center uppercase tracking-widest">
-        Kamal @ Root / VPS Kamatera (Ubuntu)
+      <div class="hidden lg:block p-6 border-t border-slate-800/50 bg-[#0a0b0e]">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+            <span class="text-[10px] text-slate-400 font-mono uppercase tracking-tighter">Authenticated as {{ pseudo }} @ </span>
+        </div>
+        <div class="text-[9px] text-slate-600 font-mono break-all leading-tight opacity-50 uppercase">
+          {{ systemData ? `${systemData.cluster_version} // ${systemData.vps_os}` : 'Loading system info...' }}
+        </div>
       </div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto relative">
-      
-      <div class="fixed inset-0 pointer-events-none flex items-center justify-center z-0 overflow-hidden">
-        <img 
-          src="/logo_background.png" 
-          alt="Watermark" 
-          class="ml-64 p-10 w-[600px] opacity-[0.10] grayscale brightness-50"
-        />
+    <main class="flex-1 flex flex-col min-w-0 relative">
+      <div class="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
+        <div class="w-[500px] h-[500px] border border-blue-500/5 rounded-full absolute animate-ping-slow"></div>
+        <img src="/logo_background.png" alt="K-Guard" 
+             class="w-[450px] opacity-[0.05] pointer-events-none select-none" />
       </div>
 
-      <header class="h-16 border-b border-slate-800 bg-[#111217]/50 flex items-center justify-between px-8 sticky top-0 z-10 backdrop-blur-md">
-        <h2 class="text-[10px] uppercase tracking-[0.3em] font-bold text-slate-500">Infrastructure Monitoring</h2>
-        <div class="text-[10px] text-green-500 font-bold tracking-widest animate-pulse">● CLUSTER ONLINE</div>
-      </header>
-
-      <div class="p-8 relative z-10">
-        <div class="mb-10 flex justify-between items-center">
-          <div>
-            <h1 class="text-4xl font-extralight text-white tracking-tight">System Status</h1>
-            <p class="text-xs text-slate-500 mt-1 uppercase tracking-wider">K3s Environment: blog & portfolio</p>
+      <header class="h-20 border-b border-slate-800/60 bg-[#111217]/80 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-[45] backdrop-blur-xl">
+        <div class="flex items-center gap-6">
+          <button @click="isMenuOpen = !isMenuOpen" 
+                  class="lg:hidden text-slate-400 hover:text-white p-2 transition-colors cursor-pointer bg-slate-800/30 rounded-sm">
+            <span class="text-xl">{{ isMenuOpen ? '✕' : '☰' }}</span>
+          </button>
+          
+          <div class="flex flex-col">
+            <h2 class="text-xl font-extralight text-white tracking-tight uppercase">{{ pageTitle }}</h2>
           </div>
-          <button 
-            @click="fetchClusterData" 
-            class="cursor-pointer bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white border border-blue-500/20 px-6 py-2 rounded-sm text-[10px] font-bold transition-all uppercase tracking-widest active:scale-95"
-          >
-            Refresh Data
+        </div>
+        
+        <div class="flex items-center gap-6">
+            <div class="hidden md:flex flex-col items-end">
+                <span class="text-[9px] text-green-500 font-bold tracking-[0.2em] uppercase flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    K3s Cloud online
+                </span>
+                
+                <span class="text-[10px] text-slate-600 font-mono mt-1 uppercase">
+                    Latency: {{ systemLatency }}ms // {{ vpsProvider }}
+                </span>
+            </div>
+            <button @click="handleLogout" 
+                  class="group flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/60 px-4 py-2 rounded-sm transition-all duration-300 cursor-pointer">
+              <span class="text-xs text-red-500 group-hover:text-red-400 font-bold uppercase tracking-tighter">LogOut</span>
           </button>
         </div>
+      </header>
 
-        <div v-if="loading" class="flex flex-col items-center justify-center py-32 space-y-4">
-          <div class="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span class="text-[10px] uppercase tracking-[0.4em] text-slate-500">Scanning Nodes...</span>
-        </div>
-
-        <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <div v-for="pod in apps" :key="pod.pod_name" 
-               @click="openDetails(pod)"
-               class="group relative bg-[#181b1f] border border-slate-800 p-6 rounded-sm hover:border-blue-500/50 transition-all cursor-pointer">
-            
-            <div class="flex justify-between items-start mb-8">
-              <div>
-                <h3 class="text-xl font-bold text-white group-hover:text-blue-400 transition-colors uppercase">{{ pod.name }}</h3>
-                <p class="text-[9px] font-mono text-slate-500 mt-1 break-all">{{ pod.pod_name }}</p>
-              </div>
-              <span :class="pod.status === 'SECURE' ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'" 
-                    class="text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-tighter">
-                {{ pod.status }}
-              </span>
-            </div>
-
-            <div class="space-y-4">
-              <div class="flex justify-between items-end">
-                <span class="text-[10px] text-slate-600 uppercase font-bold">Network Intern IP</span>
-                <span class="text-xs font-mono text-slate-300">{{ pod.ip }}</span>
-              </div>
-              <div class="h-1 bg-slate-900 rounded-full overflow-hidden">
-                <div class="h-full bg-blue-500 transition-all duration-1000" :style="{ width: pod.status === 'SECURE' ? '100%' : '20%' }"></div>
-              </div>
-            </div>
-
-            <button 
-              @click="(e) => restartPod(e, pod)" 
-              class="cursor-pointer absolute top-18 right-6 opacity-0 group-hover:opacity-100 bg-red-900/40 hover:bg-red-700 text-white text-[9px] font-bold px-3 py-1.5 rounded-sm shadow-xl transition-all uppercase tracking-widest z-30"
-            >
-              Restart
-            </button>
-          </div>
-        </div>
+      <div class="flex-1 overflow-y-auto overflow-x-auto relative z-10 custom-scrollbar">
+        <router-view v-slot="{ Component }">
+          <transition name="page" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </div>
     </main>
-
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/95 backdrop-blur-sm">
-      <div class="bg-[#111217] border border-slate-800 w-full max-w-5xl h-[80vh] flex flex-col rounded-sm shadow-2xl">
-        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-[#181b1f]">
-          <span class="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Log Stream // {{ selectedPod?.name }}</span>
-          <button @click="showModal = false" class="text-slate-500 hover:text-white text-2xl">&times;</button>
-        </div>
-        <div class="flex-1 p-6 overflow-y-auto font-mono text-[11px] text-slate-400 leading-relaxed bg-black/20">
-          <pre class="whitespace-pre-wrap">{{ podLogs }}</pre>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
-<style>
-@import "tailwindcss";
+<style scoped>
+/* Navigation Links Styles */
+@reference "../style.css";
 
-@font-face {
-  font-family: 'Valorant';
-  src: url('./assets/fonts/Valorant.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
+.nav-link {
+  @apply flex items-center gap-4 p-4 rounded-sm text-sm transition-all duration-300 border border-transparent;
 }
 
-:root { color-scheme: dark; }
-body { margin: 0; background: #0b0c10; overflow: hidden; }
-
-/* Classe utilitaire pour la police Valorant */
-.font-valorant {
-  font-family: 'Valorant', sans-serif;
+.nav-active {
+  @apply bg-blue-600/10 border-blue-500/30 text-white shadow-[inset_0_0_20px_rgba(59,130,246,0.1)];
 }
+
+.nav-inactive {
+  @apply text-slate-500 hover:bg-slate-800/30 hover:text-slate-200 hover:border-slate-800;
+}
+
+/* Animations */
+.animate-ping-slow {
+  animation: ping 5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.page-enter-active, .page-leave-active { transition: all 0.2s ease-out; }
+.page-enter-from { opacity: 0; transform: translateY(10px); }
+.page-leave-to { opacity: 0; transform: translateY(-10px); }
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
 </style>
