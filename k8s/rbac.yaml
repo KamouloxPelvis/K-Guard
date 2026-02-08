@@ -1,0 +1,33 @@
+# 1. On crée l'identité du pod
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: k-guard-sa
+  namespace: default
+
+---
+# 2. On définit les permissions (Le "Moindre Privilège")
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: k-guard-role
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "namespaces"]
+    verbs: ["get", "list", "watch", "delete"]
+---
+# 3. On lie l'identité aux permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: k-guard-rb
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: k-guard-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: k-guard-role
+  apiGroup: rbac.authorization.k8s.io

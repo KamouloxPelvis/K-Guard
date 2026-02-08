@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+@font-face {
+  font-family: 'Valorant';
+  src: url('/fonts/Valorant.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.font-valorant {
+  font-family: 'Valorant', sans-serif !important;
+  text-transform: uppercase;
+}

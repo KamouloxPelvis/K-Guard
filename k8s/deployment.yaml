@@ -13,15 +13,26 @@ spec:
       labels:
         app: k-guard
     spec:
+      # 1. Utilisation de l'identité RBAC créée
+      serviceAccountName: k-guard-sa
+      
+      # 2. Clé pour ouvrir le registre Cloud GitLab
+      imagePullSecrets:
+        - name: gitlab-k-guard-registry-key
+      
       containers:
       - name: backend
-        image: 113.30.191.17:5000/k-guard-backend:latest # En supposant mon registry local
+        # 3. Image tirée depuis le Cloud
+        image: registry.gitlab.com/portfolio-kamal-guidadou/k-guard/backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         env:
         - name: KUBECONFIG
-          value: "/app/config" # Pour que FastAPI parle à K3s
+          value: "" # On le vide car load_incluster_config() n'en a pas besoin avec le SA
+      
       - name: frontend
-        image: 113.30.191.17:5000/k-guard-frontend:latest
+        image: registry.gitlab.com/portfolio-kamal-guidadou/k-guard/frontend:latest
+        imagePullPolicy: Always
         ports:
-        - containerPort: 5173
+        - containerPort: 80 # Nginx sert le front sur le port 80

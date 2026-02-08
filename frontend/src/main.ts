@@ -1,5 +1,9 @@
 import { createApp } from 'vue'
-import './style.css'
 import App from './App.vue'
+import router from './router' // Importe la config du router [cite: 2026-02-07]
+import './style.css'
 
-createApp(App).mount('#app')
+const app = createApp(App)
+
+app.use(router) // On dit à Vue d'utiliser le système de navigation [cite: 2026-02-07]
+app.mount('#app')

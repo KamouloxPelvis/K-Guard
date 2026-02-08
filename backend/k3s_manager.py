@@ -19,6 +19,7 @@ def get_k3s_status():
                     pod_results.append({
                         "name": app_name,
                         "pod_name": pod.metadata.name,
+                        "namespace": pod.metadata.namespace,
                         "status": "SECURE" if pod.status.phase == "Running" else "ALERT",
                         "ip": pod.status.pod_ip,
                         "type": "k3s Pod"

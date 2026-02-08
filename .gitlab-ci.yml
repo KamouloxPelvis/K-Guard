@@ -1,0 +1,32 @@
+stages:
+  - build
+  - clean_deploy
+
+variables:
+  BACKEND_IMAGE: $CI_REGISTRY_IMAGE/backend:latest
+  FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend:latest
+
+# 1. Phase de Build : On utilise --no-cache ici
+build_images:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --no-cache -t $BACKEND_IMAGE ./backend
+    - docker build --no-cache -t $FRONTEND_IMAGE ./frontend
+    - docker push $BACKEND_IMAGE
+    - docker push $FRONTEND_IMAGE
+
+# 2. Phase de Déploiement : On fait le ménage sur le VPS avant de puller
+deploy_to_vps:
+  stage: clean_deploy
+  image: alpine:latest
+  before_script:
+    - chmod 400 $CI_CD_SSH_KEY
+  script:
+    - ssh -i $CI_CD_SSH_KEY -o StrictHostKeyChecking=no kamal@vps_ip "
+        docker system prune -f && 
+        kubectl rollout restart deployment k-guard-deployment
+      "
