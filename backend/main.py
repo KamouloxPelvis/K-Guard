@@ -1,76 +1,55 @@
 import os
-
 from fastapi import FastAPI
-from kubernetes import client, config
 from fastapi.middleware.cors import CORSMiddleware
+from kubernetes import client, config  # <--- AJOUTÉ
+# On importe ta logique métier automatisée
+from k3s_manager import get_k3s_status 
 
+app = FastAPI(title="K-Guard API")
 
-app = FastAPI(title="K-Guard K3s Operator")
+# Configuration du client Kubernetes
+try:
+    # On essaie de charger la config K3s locale [cite: 2026-02-07]
+    config.load_kube_config()
+except:
+    # Si on est dans le cluster (VPS), on utilise la config interne
+    config.load_incluster_config()
 
+v1 = client.CoreV1Api() # <--- L'OBJET MANQUANT EST ICI
+
+# Sécurité pour le développement local [cite: 2026-02-07]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Pour le dev, on autorise tout
+    allow_origins=["*"], 
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# On charge la config k3s
-# Quand on lance l'API sur le VPS, il va chercher ~/.kube/config
-
-try:
-    config.load_kube_config()
-except Exception:
-    # Chemin exact sur Ubuntu avec k3s
-    kube_path = "/etc/rancher/k3s/k3s.yaml"
-    if os.path.exists(kube_path):
-        os.environ["KUBECONFIG"] = kube_path
-        config.load_kube_config()
-    else:
-        print("Alerte: Fichier k3s.yaml introuvable")
-
-v1 = client.CoreV1Api()
-
-@app.get("/")
-async def root():
-    return {"message": "K-Guard API is Live", "docs": "/docs"}
 
 @app.get("/api/k3s/health")
 async def get_cluster_health():
-    """Récupère l'état de santé réel des apps de Kamal"""
-    monitored_apps = ["blog-devopsnotes", "portfolio-portal", "k-guard"]
-    results = []
-    
-    try:
-        # On récupère tous les pods du namespace 'default' (ou celui que tu utilises)
-        pods = v1.list_pod_for_all_namespaces(watch=False)
-        
-        for pod in pods.items:
-            # On vérifie si le pod appartient à une de tes apps
-            for app_name in monitored_apps:
-                if app_name in pod.metadata.name:
-                    results.append({
-                        "app": app_name,
-                        "pod_name": pod.metadata.name,
-                        "status": pod.status.phase, # Running, Pending, Failed...
-                        "restarts": pod.status.container_statuses[0].restart_count if pod.status.container_statuses else 0,
-                        "image": pod.spec.containers[0].image,
-                        "health_score": "SECURE" if pod.status.phase == "Running" else "ALERT"
-                    })
-        return results
-    except Exception as e:
-        return {"error": str(e)}
+    """Appelle ton script de monitoring pour le dashboard"""
+    return get_k3s_status()
+
+@app.get("/")
+async def root():
+    return {"status": "K-Guard Live", "operator": "Kamal"}
 
 @app.get("/api/k3s/logs/{pod_name}")
 async def get_pod_logs(pod_name: str):
-    """Récupère les 50 dernières lignes de logs pour le dépannage"""
+    """Récupère les logs pour le dépannage [cite: 2026-02-07]"""
     try:
-        # On cherche dans quel namespace est le pod
-        pods = v1.list_pod_for_all_namespaces(watch=False)
-        namespace = "default"
-        for p in pods.items:
-            if p.metadata.name == pod_name:
-                namespace = p.metadata.namespace
-        
-        logs = v1.read_namespaced_pod_log(name=pod_name, namespace=namespace, tail_lines=50)
-        return {"pod": pod_name, "logs": logs}
+        # v1 est maintenant bien défini
+        logs = v1.read_namespaced_pod_log(name=pod_name, namespace="default", tail_lines=100)
+        return {"logs": logs}
     except Exception as e:
-        return {"error": str(e)}    
+        return {"error": str(e)}
+
+@app.delete("/api/k3s/restart/{namespace}/{pod_name}")
+async def restart_pod(namespace: str, pod_name: str):
+    """Force le redémarrage d'un pod en le supprimant"""
+    try:
+        # v1 est maintenant bien défini
+        v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+        return {"status": "success", "message": f"Pod {pod_name} is restarting..."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

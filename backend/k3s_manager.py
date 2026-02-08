@@ -9,7 +9,7 @@ def get_k3s_status():
         v1 = client.CoreV1Api()
         
         # On cible les namespaces ou noms d'apps existant dans le vps
-        apps_to_watch = ["blog-prdd", "portfolio-portal"]
+        apps_to_watch = ["blog-devopsnotes", "portfolio-portal"]
         pod_results = []
 
         pods = v1.list_pod_for_all_namespaces(watch=False)
