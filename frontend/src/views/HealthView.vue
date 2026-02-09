@@ -43,13 +43,14 @@ const calculateMemPercent = (raw: string | undefined): number => {
   return Math.min((numericValue / 1048576) * 100, 100);
 };
 
+
 const router = useRouter();
 const apps = ref<PodStatus[]>([]);
 const metrics = ref<Record<string, PodMetrics>>({}); 
 const loading = ref(false);
 const isInitialLoad = ref(true);
 const selectedPod = ref<PodStatus | null>(null);
-const podLogs = ref("");
+  const podLogs = ref("");
 const showModal = ref(false);
 
 // Configuration API
@@ -72,7 +73,7 @@ const fetchClusterData = async () => {
     
     const namespaces = [...new Set(data.map((p: PodStatus) => p.namespace))];
     namespaces.forEach(ns => fetchMetrics(ns as string));
-
+    
   } catch (error: any) {
     console.error("K-Guard Link Down:", error);
     
@@ -158,11 +159,6 @@ const getStatusClass = (status: string) => {
   return 'text-red-500 bg-red-500/10 border-red-500/20';
 };
 
-const getLoadColor = (percent: number) => {
-  if (percent > 80) return 'bg-red-500';
-  if (percent > 50) return 'bg-orange-500';
-  return 'bg-blue-500'; // Couleur par défaut (basse consommation)
-};
 </script>
 
 <template>
@@ -170,7 +166,7 @@ const getLoadColor = (percent: number) => {
     <header class="mb-12 flex justify-between items-end border-b border-slate-800 pb-7">
       <div><p class="text-[12px] text-slate-500 mt-6 uppercase tracking-[0.5em]">K-Guard SRE Monitor</p></div>
       <div class="flex gap-4">
-        <button @click="fetchClusterData" class="bg-slate-800/40 hover:bg-blue-600 border border-slate-700 px-5 py-2 rounded-sm transition-all text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-widest">ReSync</button>
+        <button @click="fetchClusterData" class="bg-slate-800/40 hover:bg-blue-600 border border-slate-700 px-5 py-2 rounded-sm transition-all text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-widest cursor-pointer">ReSync</button>
       </div>
     </header>
 
@@ -199,11 +195,16 @@ const getLoadColor = (percent: number) => {
                 {{ calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage).toFixed(2) }}%
               </span>
             </div>
-            <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-              <div class="h-full transition-all duration-1000" 
-                  :class="getLoadColor(calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage))"
-                  :style="{ width: calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) + '%' }">
-              </div>
+            <div class="w-full bg-slate-900 h-1 rounded-full overflow-hidden mt-2">
+              <div 
+                class="h-full transition-all duration-1000 ease-out"
+                :class="{
+                  'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 30,
+                  'bg-[#f05a28]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 30 && calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 60,
+                  'bg-red-600': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 60
+                }"
+                :style="{ width: `${calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage)}%` }"
+              ></div>
             </div>
           </div>
 

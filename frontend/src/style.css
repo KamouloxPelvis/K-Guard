@@ -84,7 +84,8 @@
 
   /* Barre de progression */
   .bg-blue-500 {
-    background-color: var(--k-orange) !important;
+    background-color: #3b82f6 !important; /* Bleu vif */
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
   }
 
   .bg-slate-900 {

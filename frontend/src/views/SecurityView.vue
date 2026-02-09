@@ -78,10 +78,6 @@ const getAppStatus = (appId: string) => {
       <div>
         <div><p class="text-[12px] text-slate-500 mt-6 uppercase tracking-[0.5em]">Vulnerability Engine // Monitoring Station</p></div>
       </div>
-      <div class="flex items-center gap-3 text-[10px] font-mono text-slate-500 tracking-widest uppercase">
-        <span class="w-1.5 h-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
-        System Ready
-      </div>
     </header>
 
     <div className="astuce">

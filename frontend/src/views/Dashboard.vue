@@ -106,6 +106,10 @@ const handleLogout = () => {
       isMenuOpen ? 'translate-x-0' : '-translate-x-full',
       'fixed lg:relative z-50 h-full bg-[#0d0e12] border-r border-slate-800/60 flex flex-col shrink-0 transition-all duration-500 ease-in-out w-72 lg:translate-x-0 md:w-20 lg:w-72'
     ]">
+    <button @click="isMenuOpen = false" 
+          class="lg:hidden absolute top-5 right-5 text-slate-400 hover:text-white p-2 transition-colors cursor-pointer">
+      <span class="text-2xl font-light">✕</span>
+    </button>
       
       <div class="h-20 px-6 md:px-0 md:justify-center lg:px-8 flex items-center gap-4 border-b border-slate-800/50 bg-[#111217]">
         <img 
@@ -145,10 +149,13 @@ const handleLogout = () => {
 
       <div class="hidden lg:block p-6 border-t border-slate-800/50 bg-[#0a0b0e]">
         <div class="flex items-center gap-3 mb-3">
-            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-            <span class="text-[10px] text-slate-400 font-mono uppercase tracking-tighter">Authenticated as {{ pseudo }} @ </span>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+              Authenticated as 
+              <span class="text-[#f05a28] font-bold">{{ pseudo }}</span>
+            </p>
         </div>
-        <div class="text-[9px] text-slate-600 font-mono break-all leading-tight opacity-50 uppercase">
+        <div class="text-[10px] text-slate-600 font-mono break-all leading-tight uppercase"> Kubernetes & Distribution version : <br />
           {{ systemData ? `${systemData.cluster_version} // ${systemData.vps_os}` : 'Loading system info...' }}
         </div>
       </div>
@@ -184,7 +191,7 @@ const handleLogout = () => {
                 </span>
                 
                 <span class="text-[10px] text-slate-600 font-mono mt-1 uppercase">
-                    Latency: {{ systemLatency }}ms // {{ clusterInfo}}
+                    Latency: {{ systemLatency }}ms
                 </span>
             </div>
             <button @click="handleLogout" 
