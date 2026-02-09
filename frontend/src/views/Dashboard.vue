@@ -9,27 +9,50 @@ interface SystemInfo {
   uptime: string;
   latency: string;
 }
+
 const systemLatency = ref<number>(0);
 const vpsProvider = ref<string>("Detecting...");
 const clusterInfo = ref<string>("Fetching...");
-      
+
+// --- DANS TA SECTION <script setup> ---
+const API_CONFIG = {
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  getHeaders: () => ({
+    Authorization: `Bearer ${localStorage.getItem('user_token')}`,
+    'Content-Type': 'application/json'
+  })
+};
+
 const updateSystemStats = async () => {
   const start = Date.now();
   try {
-    const response = await fetch('/api/k3s/health', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('user_token')}` }
+    
+    const response = await fetch(`${API_CONFIG.baseURL}/api/k3s/health`, {
+      headers: API_CONFIG.getHeaders()
     });
     
     if (response.ok) {
       const data = await response.json();
-      
       systemLatency.value = Date.now() - start;
-      vpsProvider.value = data.provider;
-      clusterInfo.value = data.cluster_version; 
+      // 'health' renvoie une liste, on prend le premier élément pour le provider
+      vpsProvider.value = data[0]?.namespace || "K3s Node";
+      clusterInfo.value = "v1.28+k3s"; 
     }
   } catch (e) {
-    console.error("Impossible de joindre le backend");
+    console.error("Dashboard: Connection Link Down");
     systemLatency.value = 0;
+  }
+};
+
+const fetchSystemInfo = async () => {
+  try {
+    // AJOUT de API_CONFIG.baseURL ici aussi
+    const response = await axios.get(`${API_CONFIG.baseURL}/api/k3s/status`, {
+      headers: API_CONFIG.getHeaders()
+    });
+    systemData.value = response.data;
+  } catch (error) {
+    console.error("Dashboard: Cluster Status Error");
   }
 };
 
@@ -37,6 +60,10 @@ let statsInterval: any;
 onMounted(() => {
   updateSystemStats();
   statsInterval = setInterval(updateSystemStats, 30000);
+});
+
+onMounted(() => {
+  fetchSystemInfo();
 });
 
 onUnmounted(() => {
@@ -58,21 +85,6 @@ const pageTitle = computed(() => {
   return 'Dashboard';
 });
 
-const fetchSystemInfo = async () => {
-  try {
-    const token = localStorage.getItem('user_token');
-    const response = await axios.get('/api/k3s/status', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    systemData.value = response.data;
-  } catch (error) {
-    console.error("Impossible de récupérer les infos du cluster", error);
-  }
-};
-
-onMounted(() => {
-  fetchSystemInfo();
-});
 
 const handleLogout = () => {
   localStorage.removeItem('token'); 
@@ -96,11 +108,14 @@ const handleLogout = () => {
     ]">
       
       <div class="h-20 px-6 md:px-0 md:justify-center lg:px-8 flex items-center gap-4 border-b border-slate-800/50 bg-[#111217]">
-        <div class="w-10 h-10 bg-gradient-to-br from-[#f05a28] to-red-900 rounded-sm flex items-center justify-center shadow-lg shadow-red-900/20">
-            <span class="text-white font-valorant text-2xl mt-1">K</span>
-        </div>
-        <span class="hidden lg:block text-white font-valorant text-xl tracking-[0.2em] mt-1 group">
-          K-<span class="text-[#f05a28] group-hover:text-white transition-colors">GUARD</span>
+        <img 
+          src="/logo_small.png" 
+          alt="K-Guard" 
+          class="w-10 h-10 object-contain"
+        />
+        
+        <span class="hidden lg:block text-white font-valorant text-xl tracking-[0.2em] mt-1">
+          K-<span class="text-[#f05a28]">GUARD</span>
         </span>
       </div>
       
@@ -111,7 +126,7 @@ const handleLogout = () => {
           :class="route.path === '/' ? 'nav-active' : 'nav-inactive'">
           <span class="text-xl">📊</span>
           <div class="flex flex-col md:hidden lg:flex">
-            <span class="text-[11px] font-bold uppercase tracking-widest">Health & Logs</span>
+            <span class="text-[11px] font-bold uppercase tracking-widest">Health</span>
             <span class="text-[8px] text-slate-500 font-mono mt-0.5 uppercase">K3s Cluster Status</span>
           </div>
         </router-link>
@@ -122,7 +137,7 @@ const handleLogout = () => {
           :class="route.path === '/security' ? 'nav-active' : 'nav-inactive'">
           <span class="text-xl">🔒</span>
           <div class="flex flex-col md:hidden lg:flex">
-            <span class="text-[11px] font-bold uppercase tracking-widest">Security Audit</span>
+            <span class="text-[11px] font-bold uppercase tracking-widest">Security</span>
             <span class="text-[8px] text-slate-500 font-mono mt-0.5 uppercase">Trivy Image Scan</span>
           </div>
         </router-link>
@@ -130,7 +145,7 @@ const handleLogout = () => {
 
       <div class="hidden lg:block p-6 border-t border-slate-800/50 bg-[#0a0b0e]">
         <div class="flex items-center gap-3 mb-3">
-            <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
             <span class="text-[10px] text-slate-400 font-mono uppercase tracking-tighter">Authenticated as {{ pseudo }} @ </span>
         </div>
         <div class="text-[9px] text-slate-600 font-mono break-all leading-tight opacity-50 uppercase">
@@ -141,7 +156,7 @@ const handleLogout = () => {
 
     <main class="flex-1 flex flex-col min-w-0 relative">
       <div class="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
-        <div class="w-[500px] h-[500px] border border-blue-500/5 rounded-full absolute animate-ping-slow"></div>
+        <div class="w-[500px] h-[500px] border border-blue-500/5 rounded-full absolute"></div>
         <img src="/logo_background.png" alt="K-Guard" 
              class="w-[450px] opacity-[0.05] pointer-events-none select-none" />
       </div>
@@ -169,7 +184,7 @@ const handleLogout = () => {
                 </span>
                 
                 <span class="text-[10px] text-slate-600 font-mono mt-1 uppercase">
-                    Latency: {{ systemLatency }}ms // {{ vpsProvider }}
+                    Latency: {{ systemLatency }}ms // {{ clusterInfo}}
                 </span>
             </div>
             <button @click="handleLogout" 

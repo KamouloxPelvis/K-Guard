@@ -1,18 +1,21 @@
 import os
 import bcrypt
 
-from security_manager import run_trivy_scan
-from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, Depends, status
+
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Security
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta
 from kubernetes import client, config 
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 
 from k3s_manager import get_k3s_status 
-from fastapi import HTTPException, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from security_manager import run_trivy_scan
+from metrics_manager import get_pod_metrics, scale_down_deployment
+
 
 
 # Chargement des variables d'environnement
@@ -53,6 +56,7 @@ def verify_password(plain_password, hashed_password):
 
 security = HTTPBearer()
 
+# --- VERIFICATION TOKEN ---
 async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     token = credentials.credentials
     try:
@@ -100,22 +104,52 @@ async def security_scan(payload: dict, user: dict = Depends(verify_token)):
 async def get_cluster_health():
     return get_k3s_status()
 
+@app.get("/api/k3s/status")
+async def get_cluster_status():
+    try:
+        
+        return {
+            "cluster_version": "v1.28.2+k3s1",
+            "vps_os": "Ubuntu 22.04 LTS",
+            "uptime": "12 days",
+            "status": "Ready"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/k3s/logs/{namespace}/{pod_name}")
 async def get_logs(namespace: str, pod_name: str):
     try:
-        # On définit quel conteneur on veut inspecter par défaut
-        # Pour le blog, c'est "blog-backend"
+
         container_target = "blog-backend" if "blog" in pod_name else None
         
         logs = v1.read_namespaced_pod_log(
             name=pod_name,
             namespace=namespace,
-            container=container_target, # On précise le conteneur ici !
+            container=container_target,
             tail_lines=100
         )
         return {"logs": logs}
     except Exception as e:
         return {"logs": f"ERROR: Unable to fetch logs for {pod_name}. {str(e)}"}
+
+# --- ROUTES MÉTRIQUES & MCO ---
+
+@app.get("/api/k3s/metrics/{namespace}")
+async def get_metrics(namespace: str, user: dict = Depends(verify_token)):
+    """Récupère la charge CPU/RAM pour affichage dans HealthView.vue"""
+    metrics = get_pod_metrics(namespace)
+    if not metrics:
+        raise HTTPException(status_code=404, detail="Metrics server non disponible ou namespace vide")
+    return metrics
+
+@app.post("/api/k3s/remediate/{namespace}/{pod_name}")
+async def remediate_load(namespace: str, pod_name: str, user: dict = Depends(verify_token)):
+    """Action de remédiation déclenchée par le front si la charge est trop haute"""
+    
+    return await scale_down_deployment(namespace, pod_name)
+
+ # --- ROUTE FORCE RESTARTS POD ---   
 
 @app.delete("/api/k3s/restart/{namespace}/{pod_name}")
 async def restart_pod(namespace: str, pod_name: str, token: str = Depends(verify_token)):

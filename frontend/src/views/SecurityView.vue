@@ -54,24 +54,89 @@ const openVulnerabilityDetails = (app: any) => {
     showVulnerabilityModal.value = true;
   }
 };
+
+const getAppStatus = (appId: string) => {
+  const result = scanResults.value[appId];
+  if (!result) return { text: 'IDLE', class: 'text-slate-500 border-slate-800' };
+
+  const critical = result.summary?.critical || 0;
+  const high = result.summary?.high || 0;
+
+  if (critical > 0) {
+    return { text: 'UPDATE REQUIRED', class: 'text-red-500 border-red-500/50 bg-red-500/5' };
+  } 
+  if (high > 10) {
+    return { text: 'WATCH OUT', class: 'text-orange-500 border-orange-500/50 bg-orange-500/5' };
+  }
+  return { text: 'SECURE', class: 'text-green-500 border-green-500/50 bg-green-500/5' };
+};
 </script>
 
 <template>
   <div class="p-8 relative z-10 font-sans selection:bg-blue-500/30">
     <header class="mb-12 flex justify-between items-end border-b border-slate-800/40 pb-8">
       <div>
-        <h1 class="text-2xl font-light text-white tracking-[0.15em] uppercase">
-          Security <span class="text-blue-500 font-semibold">Audit</span>
-        </h1>
-        <p class="text-[9px] text-slate-500 mt-2 uppercase tracking-[0.4em] opacity-70">
-          Vulnerability Engine // Monitoring Station
-        </p>
+        <div><p class="text-[12px] text-slate-500 mt-6 uppercase tracking-[0.5em]">Vulnerability Engine // Monitoring Station</p></div>
       </div>
       <div class="flex items-center gap-3 text-[10px] font-mono text-slate-500 tracking-widest uppercase">
         <span class="w-1.5 h-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
         System Ready
       </div>
     </header>
+
+    <div className="astuce">
+    Astuce : ctrl shift + clic gauche force le scan de vulnérabilités sur Nginx 1.18 pour contrôler a 
+      réactivité du système face à une image conteneur obsolète et prouver l'efficacité de notre moteur d'audit Trivy.
+    </div>
+
+  <Teleport to="body">
+    <div v-if="showVulnerabilityModal" 
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+      
+      <div class="bg-[#1c2532] border border-slate-700 w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
+        
+        <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-[#121822]">
+          <div>
+            <h2 class="text-white font-valorant text-lg tracking-widest">{{ selectedAppName }}</h2>
+            <p class="text-[10px] text-slate-500 uppercase mt-1">Security Audit Report // Trivy v0.48</p>
+          </div>
+          <button @click="showVulnerabilityModal = false" class="text-slate-500 hover:text-white transition-colors cursor-pointer text-xl">✕</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar bg-[#0d1117]">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="text-[10px] text-slate-500 uppercase tracking-tighter border-b border-slate-800">
+                <th class="pb-4">ID</th>
+                <th class="pb-4">Package</th>
+                <th class="pb-4 text-right">Severity</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/50">
+              <tr v-for="vuln in selectedAppVulnerabilities" :key="vuln.id" class="group">
+                <td class="py-4 text-xs font-mono text-blue-400">{{ vuln.id }}</td>
+                <td class="py-4 text-xs text-slate-300">{{ vuln.pkg }}</td>
+                <td class="py-4 text-right">
+                  <span :class="vuln.severity === 'CRITICAL' ? 'text-red-500 bg-red-500/10' : 'text-orange-500 bg-orange-500/10'"
+                        class="text-[9px] font-bold px-2 py-0.5 border border-current rounded-sm uppercase">
+                    {{ vuln.severity }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div v-if="selectedAppVulnerabilities.length === 0" class="py-20 text-center">
+            <p class="text-green-500 font-mono text-sm uppercase tracking-widest">✅ No High or Critical Vulnerabilities Found</p>
+          </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-700 bg-[#121822] text-right">
+          <button @click="showVulnerabilityModal = false" class="btn-action btn-logs">Fermer</button>
+        </div>
+      </div>
+    </div>
+</Teleport>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div v-for="app in apps" :key="app.id" 
@@ -82,10 +147,18 @@ const openVulnerabilityDetails = (app: any) => {
         <div class="p-8">
           <div class="flex justify-between items-center mb-10">
             <h3 class="text-lg font-medium text-slate-200 tracking-widest uppercase">{{ app.name }}</h3>
-            <span class="text-[8px] font-bold px-2 py-1 tracking-[0.2em] uppercase border border-slate-800 text-slate-500">
-              {{ scanResults[app.id] ? 'STATUS: OK' : 'STATUS: IDLE' }}
-            </span>
-          </div>
+            <span :class="getAppStatus(app.id).class" 
+              class="text-[8px] font-bold px-2 py-1 tracking-[0.2em] uppercase border transition-all duration-500">
+                  STATUS: {{ getAppStatus(app.id).text }}
+                  </span>
+                  </div>
+                  <div :class="[
+              getAppStatus(app.id).text === 'UPDATE REQUIRED' ? 'bg-red-600' : 
+              getAppStatus(app.id).text === 'WATCH OUT' ? 'bg-orange-500' : 
+              'bg-slate-800 group-hover:bg-blue-600'
+            ]" 
+            class="h-[2px] w-full transition-colors duration-500">
+        </div>
 
           <div v-if="scanResults[app.id]" class="grid grid-cols-2 gap-px bg-slate-800/30 border border-slate-800/30 mb-10">
             <div class="bg-[#0d0e12] p-6 text-center">
@@ -115,6 +188,52 @@ const openVulnerabilityDetails = (app: any) => {
               [ Open Report ]
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="showVulnerabilityModal" 
+         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+      
+      <div class="bg-[#1c2532] border border-slate-700 w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
+        
+        <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-[#121822]">
+          <div>
+            <h2 class="text-white font-valorant text-lg tracking-widest">{{ selectedAppName }}</h2>
+            <p class="text-[10px] text-slate-500 uppercase mt-1">Security Audit Report // Trivy v0.48</p>
+          </div>
+          <button @click="showVulnerabilityModal = false" class="text-slate-500 hover:text-white transition-colors cursor-pointer text-xl">✕</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar bg-[#0d1117]">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="text-[10px] text-slate-500 uppercase tracking-tighter border-b border-slate-800">
+                <th class="pb-4">ID</th>
+                <th class="pb-4">Package</th>
+                <th class="pb-4 text-right">Severity</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/50">
+              <tr v-for="vuln in selectedAppVulnerabilities" :key="vuln.id" class="group">
+                <td class="py-4 text-xs font-mono text-blue-400">{{ vuln.id }}</td>
+                <td class="py-4 text-xs text-slate-300">{{ vuln.pkg }}</td>
+                <td class="py-4 text-right">
+                  <span :class="vuln.severity === 'CRITICAL' ? 'text-red-500 bg-red-500/10' : 'text-orange-500 bg-orange-500/10'"
+                        class="text-[9px] font-bold px-2 py-0.5 border border-current rounded-sm uppercase">
+                    {{ vuln.severity }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div v-if="selectedAppVulnerabilities.length === 0" class="py-20 text-center">
+            <p class="text-green-500 font-mono text-sm uppercase tracking-widest">✅ No High or Critical Vulnerabilities Found</p>
+          </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-700 bg-[#121822] text-right">
+          <button @click="showVulnerabilityModal = false" class="btn-action btn-logs">Fermer</button>
         </div>
       </div>
     </div>

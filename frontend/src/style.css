@@ -1,141 +1,137 @@
-  @import "tailwindcss";
+@import "tailwindcss";
+
+  /* --- Variables de Couleurs (Inspirées du Login) --- */
+  :root {
+      color-scheme: dark;
+      --k-bg-dark: #121822;      /* Le fond très sombre du login */
+      --k-bg-card: #1c2532;      /* La couleur du panneau de login */
+      --k-orange: #f05a28;       /* L'orange Connect */
+      --k-orange-hover: #ff6b3d;
+      --k-text-muted: #8a99af;
+      --k-border: rgba(255, 255, 255, 0.05);
+  }
 
   /* --- Typographie & Branding --- */
   @font-face {
     font-family: 'Valorant';
     src: url('/fonts/Valorant.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
+    font-weight: normal; font-style: normal; font-display: swap;
   }
 
   .font-valorant {
     font-family: 'Valorant', sans-serif !important;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
   }
 
-  .k-guard-orange {
-      color: #f05a28;
-  }
-
-  .k-guard-gradient {
-      background: linear-gradient(135deg, #f05a28 0%, #7c2d12 100%);
-  }
-
-  /* --- Global Overrides --- */
-  :root {
-      color-scheme: dark;
-      --k-bg-dark: #0b0c10;
-      --k-bg-card: #111217;
-      --k-border: rgba(255, 255, 255, 0.08);
-  }
-
+  /* --- Global Resets --- */
   body {
     margin: 0;
     background-color: var(--k-bg-dark);
-    color: #94a3b8; /* slate-400 */
+    color: var(--k-text-muted);
     -webkit-font-smoothing: antialiased;
-    overflow-x: auto;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
-  /* --- Modals & Overlays (Focus Sécurité) --- */
-  .vulnerability-modal-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9999 !important;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(12px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
+  /* --- Harmonisation des Cartes & Composants --- */
+  
+  .group.relative, .bg-\[\#181b1f\]\/60 {
+    background-color: var(--k-bg-card) !important;
+    border: 1px solid var(--k-border) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: none !important;
   }
 
-  /* --- Responsive & Sidebar Logic --- */
-
-  /* Transition fluide pour tout le layout */
-  aside, img, main, .grid {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* --- NOUVEAU STYLE DES BOUTONS (UNIFIÉ) --- */
+  .btn-action {
+    @apply text-[10px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-sm transition-all duration-200 border cursor-pointer min-w-[100px] text-center inline-block;
   }
 
-  /* Tablettes et mobiles (Largeur < 1024px) */
-  @media (max-width: 1024px) {
-    .ml-64 { 
-      margin-left: 0 !important; 
-    }
-    
-    /* Ajustement du Watermark pour la lisibilité */
-    .fixed.inset-0 img {
-      width: 280px !important;
-      opacity: 0.03 !important;
-      filter: grayscale(1) brightness(0.5);
-    }
-
-    /* Sidebar masquée par défaut sur tablette */
-    aside {
-      box-shadow: 20px 0 50px rgba(0,0,0,0.5);
-    }
+  /* Redémarrer (Restart) */
+  .btn-restart {
+    background-color: #2a1a1a !important;
+    color: #ff5555 !important;
+    border: 1px solid rgba(255, 85, 85, 0.2) !important;
+  }
+  .btn-restart:hover {
+    background-color: rgba(255, 85, 85, 0.2) !important;
+    border-color: #ff5555 !important;
   }
 
-  /* Mobiles uniquement (< 640px) */
-  @media (max-width: 640px) {
-    .p-8 { 
-      padding: 1.25rem !important; 
-    }
-    
-    h1 { 
-      font-size: 1.75rem !important; 
-      line-height: 1.2;
-    }
-
-    /* On force le stack vertical pour les stats */
-    .grid-cols-2 { 
-      grid-template-columns: 1fr !important; 
-    }
-
-    /* Optimisation des cartes pour petits écrans */
-    .group.relative {
-      padding: 1.25rem !important;
-    }
+  /* Logs */
+  .btn-logs {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    color: #60a5fa !important;
+    border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  }
+  .btn-logs:hover {
+    background-color: #3b82f6 !important;
+    color: white !important;
+    border-color: #3b82f6 !important;
   }
 
-  /* --- Utilitaires Devops --- */
-
-  /* Scrollbar fine style Terminal */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+  /* Intervenir (Remediate) */
+  .btn-remediate {
+    background-color: var(--k-orange) !important;
+    color: white !important;
+    border: 1px solid var(--k-orange) !important;
+  }
+  .btn-remediate:hover {
+    background-color: var(--k-orange-hover) !important;
+    border-color: var(--k-orange-hover) !important;
+    box-shadow: 0 0 15px rgba(240, 90, 40, 0.3);
   }
 
-  ::-webkit-scrollbar-track {
-    background: var(--k-bg-dark);
+  /* Barre de progression */
+  .bg-blue-500 {
+    background-color: var(--k-orange) !important;
   }
 
-  ::-webkit-scrollbar-thumb {
-    background: #1e293b;
-    border-radius: 10px;
+  .bg-slate-900 {
+    background-color: #0b0f15 !important;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #f05a28;
+  /* --- Sidebar & Header --- */
+  aside, .bg-\[\#111217\]\/80 {
+    background-color: #0f141d !important;
+    border-color: var(--k-border) !important;
   }
 
-  /* Effet de scanline pour le côté "NOC" */
-  .scanline-effect {
-    position: relative;
-    overflow: auto;
+  /* --- Scrollbar --- */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--k-bg-dark); }
+  ::-webkit-scrollbar-thumb { 
+    background: #2d3848; 
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--k-orange); }
+
+  /* --- Utilitaires --- */
+  .nav-active {
+    background-color: rgba(240, 90, 40, 0.05) !important;
+    border-left: 3px solid var(--k-orange) !important;
+    color: white !important;
   }
 
-  .scanline-effect::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      transparent 50%,
-      rgba(240, 90, 40, 0.02) 50%
-    );
-    background-size: 100% 4px;
-    pointer-events: none;
+  .animate-ping-slow, .animate-pulse {
+    animation-duration: 3s !important;
+    opacity: 0.6 !important;
   }
+
+  /* --- Style de l'astuce (SecurityView) --- */
+.astuce {
+    font-family: 'Inter', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;                  
+    line-height: 1.6;                  
+    color: var(--k-text-muted);      
+    opacity: 0.7;      
+    max-width: 800px;                
+    margin: 2rem 0 3rem 0;          
+    letter-spacing: 0.02em;
+}
+
+.astuce span.highlight {
+    color: var(--k-orange);            
+    font-weight: bold;
+    text-transform: uppercase;
+}
