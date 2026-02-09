@@ -6,7 +6,7 @@ variables:
   BACKEND_IMAGE: $CI_REGISTRY_IMAGE/backend:latest
   FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend:latest
 
-# 1. Phase de Build : Construction sans cache pour garantir la fraîcheur
+# 1. Phase de Build : On garde docker:latest pour le build
 build_images:
   stage: build
   image: docker:latest
@@ -19,12 +19,13 @@ build_images:
     - docker push $BACKEND_IMAGE
     - docker push $FRONTEND_IMAGE
 
-# 2. Phase de Déploiement : Utilisation de alpine/git (SSH pré-installé)
+# 2. Phase de Déploiement : Utilisation de Bitnami Minideb
 deploy_to_vps:
   stage: clean_deploy
-  image: alpine/git:latest
+  image: bitnami/minideb:latest
   before_script:
-    # On protège la clé avec des guillemets (plus sûr pour le shell)
+    # install_packages est un utilitaire Bitnami ultra-rapide
+    - install_packages openssh-client
     - chmod 400 "$CI_CD_SSH_KEY"
   script:
     - ssh -i "$CI_CD_SSH_KEY" -o StrictHostKeyChecking=no kamal@113.30.191.17 "
