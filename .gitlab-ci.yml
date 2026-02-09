@@ -6,7 +6,7 @@ variables:
   BACKEND_IMAGE: $CI_REGISTRY_IMAGE/backend:latest
   FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend:latest
 
-# 1. Phase de Build : On utilise --no-cache ici
+# 1. Phase de Build : Construction sans cache pour garantir la fraîcheur
 build_images:
   stage: build
   image: docker:latest
@@ -19,14 +19,15 @@ build_images:
     - docker push $BACKEND_IMAGE
     - docker push $FRONTEND_IMAGE
 
-# 2. Phase de Déploiement : On fait le ménage sur le VPS avant de puller
+# 2. Phase de Déploiement : Utilisation de alpine/git (SSH pré-installé)
 deploy_to_vps:
   stage: clean_deploy
-  image: alpine:latest
+  image: alpine/git:latest
   before_script:
-    - chmod 400 $CI_CD_SSH_KEY
+    # On protège la clé avec des guillemets (plus sûr pour le shell)
+    - chmod 400 "$CI_CD_SSH_KEY"
   script:
-    - ssh -i $CI_CD_SSH_KEY -o StrictHostKeyChecking=no kamal@113.30.191.17 "
+    - ssh -i "$CI_CD_SSH_KEY" -o StrictHostKeyChecking=no kamal@113.30.191.17 "
         docker system prune -f && 
         kubectl rollout restart deployment k-guard-deployment
       "
