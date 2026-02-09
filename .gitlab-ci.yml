@@ -26,7 +26,7 @@ deploy_to_vps:
   before_script:
     - chmod 400 $CI_CD_SSH_KEY
   script:
-    - ssh -i $CI_CD_SSH_KEY -o StrictHostKeyChecking=no kamal@vps_ip "
+    - ssh -i $CI_CD_SSH_KEY -o StrictHostKeyChecking=no kamal@113.30.191.17 "
         docker system prune -f && 
         kubectl rollout restart deployment k-guard-deployment
       "
