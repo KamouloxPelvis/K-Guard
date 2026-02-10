@@ -3,6 +3,7 @@ import Dashboard from '../views/Dashboard.vue'
 import HealthView from '../views/HealthView.vue'
 import SecurityView from '../views/SecurityView.vue'
 
+
 const routes = [
   {
     path: '/',
@@ -11,12 +12,14 @@ const routes = [
       {
         path: '', // Route par défaut (/)
         name: 'Health',
-        component: HealthView
+        meta: { requiresAuth: true },
+        component: HealthView,
       },
       {
         path: 'security', // Route (/security)
         name: 'Security',
-        component: SecurityView
+        meta: { requiresAuth: true },
+        component: SecurityView,
       }
     ]
   },
@@ -31,5 +34,17 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+router.beforeEach((to, _from, next) => { 
+  const token = localStorage.getItem('user_token');
+
+  if (to.meta.requiresAuth && !token) {
+    next({ name: 'Login' });
+  } else if (to.name === 'Login' && token) {
+    next({ name: 'Health' }); 
+  } else {
+    next();
+  }
+});
 
 export default router

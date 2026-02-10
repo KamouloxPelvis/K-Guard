@@ -1,95 +1,109 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
+  import { useRoute } from 'vue-router';
+  import axios from 'axios';
 
-interface SystemInfo {
-  cluster_version: string;
-  vps_os: string;
-  uptime: string;
-  latency: string;
-}
+  interface SystemInfo {
+    cluster_version: string;
+    vps_os: string;
+    uptime: string;
+    latency: string;
+  }
 
-const systemLatency = ref<number>(0);
-const vpsProvider = ref<string>("Detecting...");
-const clusterInfo = ref<string>("Fetching...");
+  const systemLatency = ref<number>(0);
+  const vpsProvider = ref<string>("Detecting...");
+  const clusterInfo = ref<string>("Fetching...");
 
-// --- DANS TA SECTION <script setup> ---
-const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-  getHeaders: () => ({
-    Authorization: `Bearer ${localStorage.getItem('user_token')}`,
-    'Content-Type': 'application/json'
-  })
-};
+  const API_CONFIG = {
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+    getHeaders: () => ({
+      Authorization: `Bearer ${localStorage.getItem('user_token')}`,
+      'Content-Type': 'application/json'
+    })
+  };
 
-const updateSystemStats = async () => {
-  const start = Date.now();
-  try {
-    
-    const response = await fetch(`${API_CONFIG.baseURL}/api/k3s/health`, {
-      headers: API_CONFIG.getHeaders()
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      systemLatency.value = Date.now() - start;
-      // 'health' renvoie une liste, on prend le premier élément pour le provider
-      vpsProvider.value = data[0]?.namespace || "K3s Node";
-      clusterInfo.value = "v1.28+k3s"; 
+  const updateSystemStats = async () => {
+    const start = Date.now();
+    try {
+      
+      const response = await fetch(`${API_CONFIG.baseURL}/api/k3s/health`, {
+        headers: API_CONFIG.getHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        systemLatency.value = Date.now() - start;
+        // 'health' renvoie une liste, on prend le premier élément pour le provider
+        vpsProvider.value = data[0]?.namespace || "K3s Node";
+        clusterInfo.value = "v1.28+k3s"; 
+      }
+    } catch (e) {
+      console.error("Dashboard: Connection Link Down");
+      systemLatency.value = 0;
     }
-  } catch (e) {
-    console.error("Dashboard: Connection Link Down");
-    systemLatency.value = 0;
-  }
-};
+  };
 
-const fetchSystemInfo = async () => {
+  const fetchSystemInfo = async () => {
   try {
-    // AJOUT de API_CONFIG.baseURL ici aussi
+    const token = localStorage.getItem('user_token');
+    if (!token) return;
+
     const response = await axios.get(`${API_CONFIG.baseURL}/api/k3s/status`, {
-      headers: API_CONFIG.getHeaders()
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
-    systemData.value = response.data;
+    
+    // On peuple systemData avec les clés renvoyées par main.py
+    systemData.value = response.data; 
+    console.log("✅ System Stats Loaded:", systemData.value);
   } catch (error) {
-    console.error("Dashboard: Cluster Status Error");
+    console.error("Dashboard: Cluster Status Error", error);
   }
 };
 
-let statsInterval: any;
-onMounted(() => {
-  updateSystemStats();
+onMounted(async () => {
+  await fetchSystemInfo();
+  await updateSystemStats();
   statsInterval = setInterval(updateSystemStats, 30000);
 });
 
-onMounted(() => {
-  fetchSystemInfo();
-});
+  let statsInterval: any;
+  onMounted(() => {
+    updateSystemStats();
+    statsInterval = setInterval(updateSystemStats, 30000);
+  });
 
-onUnmounted(() => {
-  clearInterval(statsInterval);
-});
+  onMounted(() => {
+    fetchSystemInfo();
+  });
 
-
-const systemData = ref<SystemInfo | null>(null);
-
-const pseudo = ref<string>(localStorage.getItem('admin_pseudo') || 'Admin');
-const isMenuOpen = ref(false);
-
-const route = useRoute();
-const router = useRouter();
-
-const pageTitle = computed(() => {
-  if (route.path === '/') return 'System Monitoring';
-  if (route.path === '/security') return 'Vulnerability Audit';
-  return 'Dashboard';
-});
+  onUnmounted(() => {
+    clearInterval(statsInterval);
+  });
 
 
-const handleLogout = () => {
-  localStorage.removeItem('token'); 
-  router.push('/login');
-};
+  const systemData = ref<SystemInfo | null>(null);
+
+  const pseudo = ref<string>(localStorage.getItem('admin_pseudo') || 'Admin');
+  const isMenuOpen = ref(false);
+
+  const route = useRoute();
+
+  const pageTitle = computed(() => {
+    if (route.path === '/') return 'System Monitoring';
+    if (route.path === '/security') return 'Vulnerability Audit';
+    return 'Dashboard';
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem('user_token'); // On utilise la même clé partout
+    localStorage.removeItem('admin_pseudo'); 
+    // On force le rechargement pour nettoyer les états axios/mémoire
+    window.location.href = '/login'; 
+  };
+
 </script>
 
 <template>
@@ -155,7 +169,7 @@ const handleLogout = () => {
               <span class="text-[#f05a28] font-bold">{{ pseudo }}</span>
             </p>
         </div>
-        <div class="text-[10px] text-slate-600 font-mono break-all leading-tight uppercase"> Kubernetes & Distribution version : <br />
+        <div class="text-[10px] text-slate-600 font-mono break-all leading-tight uppercase"> Kubernetes & OS Distribution versions : <br />
           {{ systemData ? `${systemData.cluster_version} // ${systemData.vps_os}` : 'Loading system info...' }}
         </div>
       </div>
