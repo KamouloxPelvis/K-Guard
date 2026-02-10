@@ -81,7 +81,7 @@ const getAppStatus = (appId: string) => {
     </header>
 
     <div className="astuce">
-    Astuce : ctrl shift + clic gauche force le scan de vulnérabilités sur Nginx 1.18 pour contrôler a 
+    Astuce : Shift + clic gauche force le scan de vulnérabilités sur Nginx 1.18 pour contrôler a 
       réactivité du système face à une image conteneur obsolète et prouver l'efficacité de notre moteur d'audit Trivy.
     </div>
 
