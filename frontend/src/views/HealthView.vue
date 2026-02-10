@@ -1,4 +1,4 @@
-  <script setup lang="ts">
+<script setup lang="ts">
   import { ref, onMounted, onUnmounted } from 'vue';
   import { useRouter } from 'vue-router';
   import axios from 'axios';
@@ -14,7 +14,7 @@
   }
 
   interface PodMetrics {
-    name: string;
+    pod_name: string;
     cpuUsage: string;    // Reçoit info bruts en nanocores (n)
     memoryUsage: string; // Reçoit infos bruts en kilooctets (Ko)
   }
@@ -47,13 +47,16 @@
 
   const router = useRouter();
   const apps = ref<PodStatus[]>([]);
-  const metrics = ref<Record<string, PodMetrics>>({}); 
+  const metricsLoading = ref<Record<string, boolean>>({});
   const loading = ref(false);
   const isInitialLoad = ref(true);
   const selectedPod = ref<PodStatus | null>(null);
-    const podLogs = ref("");
+  const podLogs = ref("");
   const showModal = ref(false);
-
+  const metrics = ref<Record<string, PodMetrics>>(
+  JSON.parse(localStorage.getItem('kguard_metrics') || '{}')
+  );
+    
   // Configuration API
   const API_CONFIG = {
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
@@ -89,27 +92,61 @@
     }
   };
 
-  const fetchMetrics = async (namespace: string) => {
-  try {
-    const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/metrics/${namespace}`, {
-      headers: API_CONFIG.getHeaders()
-    });
+  onMounted(() => {
+    // 1. Premier chargement immédiat
+    fetchClusterData();
 
-    if (Array.isArray(data)) {
-      data.forEach((m: any) => {
-        // STRATÉGIE : On enregistre la métrique sous le nom du pod 
-        // ET sous le nom court (pour être sûr que le template la trouve)
-        metrics.value[m.pod_name] = m;
-        
-        // On cherche le nom court (ex: "blog-devopsnotes") dans le nom du pod
-        const shortName = m.pod_name.split('-deployment')[0];
-        metrics.value[shortName] = m;
-      });
+    // 2. Mise en place du "pouls" SRE à 5 secondes (5000ms)
+    // On passe de 10s à 5s pour plus de réactivité, comme discuté
+    refreshInterval = setInterval(() => {
+      fetchClusterData();
+      console.log("[K-Guard] Pulse: Syncing cluster & metrics...");
+    }, 5000); 
+  });
+
+  onUnmounted(() => {
+    // 3. Nettoyage pour éviter les fuites de mémoire sur le VPS
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
     }
-  } catch (e) {
-    console.warn(`Metrics unavailable for ${namespace}`);
-  }
-};
+  });
+
+  const fetchMetrics = async (namespace: string) => {
+    metricsLoading.value[namespace] = true;
+    try {
+      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/metrics/${namespace}`, {
+        headers: API_CONFIG.getHeaders()
+      });
+
+      if (Array.isArray(data)) {
+        // Stratégie "Atomic Update" pour éviter le sautillement à 0
+        const updatedMetrics = { ...metrics.value };
+
+        data.forEach((m: PodMetrics) => {
+          // 1. On stocke par nom complet
+          updatedMetrics[m.pod_name] = m;
+          
+          // 2. On extrait le prefixe de manière sécurisée
+          const parts = m.pod_name.split('-');
+          const shortName: string | undefined = parts[0];
+
+          // 3. On utilise une garde de type pour rassurer TypeScript
+          if (typeof shortName === 'string' && shortName.length > 0) {
+            updatedMetrics[shortName] = m;
+          }
+        });
+
+        // On met à jour l'UI d'un seul coup
+        metrics.value = updatedMetrics;
+        // Persistence pour le prochain rafraîchissement
+        localStorage.setItem('kguard_metrics', JSON.stringify(updatedMetrics));
+      }
+    } catch (e) {
+      console.warn(`[K-Guard] Sync failed for ${namespace}`);
+    } finally {
+      metricsLoading.value[namespace] = false;
+    }
+  };
 
   // --- Gestion des Logs & Modal ---
   const openDetails = async (pod: PodStatus) => {
@@ -168,8 +205,7 @@
     if (s === 'SECURE' || s === 'RUNNING') return 'text-green-500 bg-green-500/10 border-green-500/20';
     return 'text-red-500 bg-red-500/10 border-red-500/20';
   };
-
-  </script>
+</script>
 
   <template>
     <div class="p-8 relative z-10">
@@ -201,19 +237,26 @@
             <div class="flex flex-col gap-2">
               <div class="flex justify-between text-[11px] uppercase font-bold tracking-widest">
                 <span class="text-slate-500">Processing Unit (CPU)</span>
-                <span class="text-blue-400 font-mono">
+                
+                <span v-if="metricsLoading[pod.namespace]" class="text-blue-500 animate-pulse">
+                  [ SCANNING... ]
+                </span>
+                
+                <span v-else class="text-blue-400 font-mono">
                   {{ calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage).toFixed(2) }}%
                 </span>
               </div>
+
               <div class="w-full bg-slate-900 h-1 rounded-full overflow-hidden mt-2">
                 <div 
                   class="h-full transition-all duration-1000 ease-out"
                   :class="{
+                    'bg-slate-800 animate-pulse': metricsLoading[pod.namespace],
                     'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 30,
                     'bg-[#f05a28]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 30 && calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 60,
                     'bg-red-600': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 60
                   }"
-                  :style="{ width: `${calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage)}%` }"
+                  :style="{ width: metricsLoading[pod.namespace] ? '100%' : `${calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage)}%` }"
                 ></div>
               </div>
             </div>

@@ -65,7 +65,7 @@
       
       let imageToScan = defaultImage;
       if (event?.shiftKey) {
-        console.warn("🛠️ K-Guard Hack: Forçage du scan sur l'image vulnérable nginx:1.18");
+        console.log("🛠️ K-Guard Hack: Forçage du scan sur l'image vulnérable nginx:1.18");
         imageToScan = "nginx:1.18";
       }
 
