@@ -16,6 +16,9 @@ from metrics_manager import get_pod_metrics, scale_down_deployment
 # Chargement des variables d'environnement
 load_dotenv()
 
+# Chargement de la liste des namespaces
+MONITORED_NAMESPACES = os.getenv("MONITORED_NAMESPACES", "default").split(",")
+
 # Configuration Sécurité
 SECRET_KEY = os.getenv("SECRET_KEY", "une-cle-tres-secrete-par-defaut")
 ALGORITHM = "HS256"
@@ -104,27 +107,44 @@ async def get_cluster_status(user: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # GET DEPLOYMENTS
+# Dans main.py
 @app.get("/api/k3s/deployments/all")
 async def list_all_deployments():
     try:
-        if not apps_client:
-            return []
+        if not apps_client: return []
         
-        # Récupération globale pour discovery dynamique
+        # On récupère tous les namespaces définis dans l'env
+        # S'il n'y a rien, on laisse la liste vide
+        env_ns = os.getenv("MONITORED_NAMESPACES", "")
+        monitored = env_ns.split(",") if env_ns else []
+
         deps = apps_client.list_deployment_for_all_namespaces()
         app_list = []
+        
+        # Namespaces système à ignorer pour rester propre (optionnel)
+        system_ns = ["kube-system", "kube-public", "kube-node-lease", "local-path-storage"]
+
         for dep in deps.items:
-            # Filtrage des namespaces projets
-            if dep.metadata.namespace in ["default", "blog-prod", "portfolio-prod"]:
+            ns = dep.metadata.namespace
+            
+            # LOGIQUE : 
+            # 1. Si l'utilisateur a spécifié des namespaces -> on filtre
+            # 2. Sinon -> on affiche tout sauf le système
+            if monitored:
+                should_add = ns in monitored
+            else:
+                should_add = ns not in system_ns
+
+            if should_add:
                 app_list.append({
                     "id": dep.metadata.uid,
                     "name": dep.metadata.name,
-                    "namespace": dep.metadata.namespace,
+                    "namespace": ns,
                     "image": dep.spec.template.spec.containers[0].image
                 })
         return app_list
     except Exception as e:
-        print(f"Erreur Discovery: {e}")
+        print(f"❌ Discovery Error: {e}")
         return []
 
 # --- ROUTES TRIVY --- 
@@ -144,17 +164,15 @@ async def get_cluster_health():
 # GET LOGS
 @app.get("/api/k3s/logs/{namespace}/{pod_name}")
 async def get_logs(namespace: str, pod_name: str):
-    global v1  # Ajout de la référence globale
+    global v1
     try:
-        if v1 is None:
-            return {"logs": "K8s client not initialized"}
-            
-        container_target = "blog-backend" if "blog" in pod_name else None
+        if v1 is None: return {"logs": "K8s client not initialized"}
         
+        # On ne spécifie pas de container, K8s prendra le premier par défaut
+        # C'est beaucoup plus adaptable !
         logs = v1.read_namespaced_pod_log(
             name=pod_name,
             namespace=namespace,
-            container=container_target,
             tail_lines=100
         )
         return {"logs": logs}

@@ -10,6 +10,9 @@ const loading = ref<boolean>(false);
 const router = useRouter();
 
 const handleLogin = async (): Promise<void> => {
+  
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
     loading.value = true;
     error.value = '';
 
@@ -18,15 +21,17 @@ const handleLogin = async (): Promise<void> => {
         formData.append('username', pseudo.value);
         formData.append('password', password.value);
 
-        // Typage de la réponse API
+        // 2. On utilise le symbole $ pour injecter la variable dans la string
         const { data } = await axios.post<{ access_token: string }>(
-        'http://localhost:8000/api/token', 
-        formData
+            `${API_BASE_URL}/api/token`, 
+            formData
         );
         
         if (data.access_token) {
-        localStorage.setItem('user_token', data.access_token);
-        await router.push('/');
+            localStorage.setItem('user_token', data.access_token);
+            // On peut aussi stocker le pseudo pour l'affichage dans le dashboard
+            localStorage.setItem('admin_pseudo', pseudo.value);
+            await router.push('/');
         }
     } catch (err) {
         error.value = "ACCESS DENIED : INVALID CREDENTIALS";

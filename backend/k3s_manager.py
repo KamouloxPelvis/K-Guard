@@ -1,20 +1,14 @@
 from kubernetes import client, config
 import datetime
 
-def get_k3s_status():   
-    """Récupère l'état de santé des pods pour HealthView.vue"""
-    try:
-        config.load_kube_config() 
-        v1 = client.CoreV1Api()
-        
-        # On définit les namespaces que l'on veut surveiller pour Kamal
-        target_namespaces = ["default", "blog-prod", "portfolio-prod"]
-        pod_results = []
+TARGET_NAMESPACES = os.getenv("MONITORED_NAMESPACES", "default").split(",")
 
+def get_k3s_status():   
+    try:
+        # ... (init config)
         pods = v1.list_pod_for_all_namespaces(watch=False)
         for pod in pods.items:
-            # On ne prend que les pods des namespaces qui nous intéressent
-            if pod.metadata.namespace in target_namespaces:
+            if pod.metadata.namespace in TARGET_NAMESPACES:
                 # Extraction d'un nom lisible (ex: portfolio-portal au lieu de portfolio-portal-6f7db...)
                 display_name = pod.metadata.labels.get('app', pod.metadata.name.split('-')[0])
                 

@@ -9,10 +9,15 @@
     uptime: string;
     latency: string;
   }
-
+  
+  const systemData = ref<SystemInfo | null>(null);
   const systemLatency = ref<number>(0);
   const vpsProvider = ref<string>("Detecting...");
   const clusterInfo = ref<string>("Fetching...");
+  const pseudo = ref<string>(localStorage.getItem('admin_pseudo') || 'Admin');
+  const isMenuOpen = ref(false);
+  const route = useRoute();
+  let statsInterval: any = null;
 
   const API_CONFIG = {
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
@@ -63,33 +68,17 @@
   }
 };
 
-onMounted(async () => {
-  await fetchSystemInfo();
-  await updateSystemStats();
-  statsInterval = setInterval(updateSystemStats, 30000);
-});
-
-  let statsInterval: any;
-  onMounted(() => {
-    updateSystemStats();
+  onMounted(async () => {
+    await fetchSystemInfo();
+    await updateSystemStats();
     statsInterval = setInterval(updateSystemStats, 30000);
   });
 
-  onMounted(() => {
-    fetchSystemInfo();
-  });
-
   onUnmounted(() => {
-    clearInterval(statsInterval);
+    if (statsInterval) {
+      clearInterval(statsInterval);
+    }
   });
-
-
-  const systemData = ref<SystemInfo | null>(null);
-
-  const pseudo = ref<string>(localStorage.getItem('admin_pseudo') || 'Admin');
-  const isMenuOpen = ref(false);
-
-  const route = useRoute();
 
   const pageTitle = computed(() => {
     if (route.path === '/') return 'System Monitoring';
@@ -103,7 +92,6 @@ onMounted(async () => {
     // On force le rechargement pour nettoyer les états axios/mémoire
     window.location.href = '/login'; 
   };
-
 </script>
 
 <template>
