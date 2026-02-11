@@ -1,30 +1,23 @@
-export interface Vulnerability {
-  id: string;
-  pkg: string;
-  severity: string;
-}
-
-export interface ScanResponse {
-  image: string;
-  critical: number;
-  high: number;
-  details: Vulnerability[];
-  status?: string;
-}
-
 import axios from 'axios';
 
-const getBaseURL = () => import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// On utilise un chemin relatif qui commence par /k-guard
+// C'est beaucoup plus robuste pour la production
+const API_BASE = '/k-guard/api';
 
 export const triggerScan = async (image: string, token: string) => {
-  const response = await axios.post(
-    `${getBaseURL()}/api/security/scan`,
-    { image },
-    { 
-      headers: { 
-        Authorization: `Bearer ${token}`
-      } 
-    }
-  );
-  return response.data;
+  try {
+    const response = await axios.post(
+      `${API_BASE}/security/scan`,
+      { image },
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}`
+        } 
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error("🚨 Scan API Error:", error.response?.data || error.message);
+    return { status: 'error', message: error.message };
+  }
 };

@@ -8,7 +8,8 @@ def run_trivy_scan(image_name: str):
         command = [
             "trivy", "image", 
             "--format", "json", 
-            "--severity", "HIGH,CRITICAL", 
+            "--severity", "HIGH,CRITICAL",
+            "--light", 
             image_name
         ]
         

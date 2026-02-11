@@ -44,17 +44,18 @@ spec:
           httpGet:
             path: /k-guard/api/
             port: 8000
-          initialDelaySeconds: 15
-          periodSeconds: 20
+          initialDelaySeconds: 30 # Plus de temps pour démarrer
+          periodSeconds: 30       # Check moins fréquent
+          failureThreshold: 5
 
         # Limites de ressources
         resources:
           limits:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "800m"     
+            memory: "1024Mi" 
           requests:
             cpu: "200m"
-            memory: "256Mi"
+            memory: "512Mi"
 
       # --- 2. FRONTEND (Vue.js + Nginx) ---
       - name: frontend
@@ -64,8 +65,8 @@ spec:
         - containerPort: 80
         resources:
           limits:
-            cpu: "200m"
-            memory: "128Mi"
+            cpu: "800m"     
+            memory: "1024Mi" 
           requests:
-            cpu: "100m"
-            memory: "64Mi"
+            cpu: "200m"
+            memory: "512Mi"
