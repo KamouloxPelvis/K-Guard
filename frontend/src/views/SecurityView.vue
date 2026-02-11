@@ -24,7 +24,7 @@
   const fetchApps = async () => {
   try {
     const token = localStorage.getItem('user_token');
-    const response = await fetch('/api/k3s/deployments/all', {
+    const response = await fetch('/k-guard/api/k3s/deployments/all', {
       headers: { 'Authorization': `Bearer ${token}` }
     }); 
     
@@ -124,7 +124,7 @@
     if (!confirm(`🚀 Lancer le Rolling Update pour ${appName} ?`)) return;  
     patchingApp.value = appId;
     try {
-      const response = await fetch(`/api/k3s/restart/${namespace}/${appName.toLowerCase()}`, {
+      const response = await fetch(`/k-guard/api/k3s/restart/${namespace}/${appName.toLowerCase()}`, {
         method: 'POST'
       });
       if (response.ok) alert("✅ Update lancé !");

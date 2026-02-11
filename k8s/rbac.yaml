@@ -1,33 +1,38 @@
-# 1. On crée l'identité du pod
+# 1. Identité du ServiceAccount
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: k-guard-sa
-  namespace: default
+  namespace: k-guard
 
 ---
-# 2. On définit les permissions (Le "Moindre Privilège")
+# 2. On passe en ClusterRole pour voir tous les namespaces
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  name: k-guard-role
-  namespace: default
+  name: k-guard-cluster-role
 rules:
   - apiGroups: [""]
-    resources: ["pods", "pods/log", "namespaces"]
+    resources: ["pods", "pods/log", "namespaces", "nodes"]
     verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
 ---
-# 3. On lie l'identité aux permissions
+# 3. On lie au niveau du cluster
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: k-guard-rb
-  namespace: default
+  name: k-guard-cluster-rb
 subjects:
   - kind: ServiceAccount
     name: k-guard-sa
-    namespace: default
+    namespace: k-guard
 roleRef:
-  kind: Role
-  name: k-guard-role
+  kind: ClusterRole
+  name: k-guard-cluster-role
   apiGroup: rbac.authorization.k8s.io

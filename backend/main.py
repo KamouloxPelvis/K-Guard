@@ -27,7 +27,11 @@ ADMIN_PSEUDO = os.getenv("ADMIN_PSEUDO")
 ADMIN_HASH = os.getenv("ADMIN_PASSWORD_HASH")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
-app = FastAPI(title="K-Guard API")
+
+app = FastAPI(
+    title="K-Guard API",
+    root_path="/k-guard"
+)
 
 # --- K8S CONFIG ---
 v1 = None
@@ -48,9 +52,18 @@ except Exception as e:
         print(f"❌ Failed to load K8s config: {e}")
 
 # --- MIDDLEWARE ---
+origins = [
+    "http://113.30.191.13:80",
+    "http://113.30.191.17:81",
+    "http://113.30.191.17",
+    "http://localhost:80"
+    "http://localhost:81",     
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -76,7 +89,7 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Security(secu
 
 # --- ROUTES AUTH ---
 # POST TOKEN
-@app.post("/api/token")
+@app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if form_data.username != ADMIN_PSEUDO or not verify_password(form_data.password, ADMIN_HASH):
         raise HTTPException(
@@ -91,75 +104,84 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def root():
     return {"status": "K-Guard Live", "mode": "Production"}
 
+# GET STATUS
+@app.get("/api/k3s/health")
+async def get_cluster_health():
+    """Route pour la HealthView"""
+    print("DEBUG: Appel Health reçu")
+    return get_k3s_status()
+
 # --- ROUTES DECOUVERTE ---
 # GET STATUS
 @app.get("/api/k3s/status")
 async def get_cluster_status(user: dict = Depends(verify_token)):
     try:
-        # On simule ou on récupère les vraies infos
+        if not v1:
+            raise HTTPException(status_code=500, detail="K8s client not initialized")
+
+        # 1. Récupération de la version du cluster
+        version_info = client.VersionApi().get_code()
+        
+        # 2. Récupération des infos du Node (OS, Kernel, IP, Uptime via le premier node du cluster)
+        nodes = v1.list_node()
+        if not nodes.items:
+            return {"status": "Error", "detail": "No nodes found"}
+        
+        node = nodes.items[0] # On prend le premier master/worker
+        node_info = node.status.node_info
+        
+        # Calcul de l'uptime approximatif depuis la création du node
+        creation_time = node.metadata.creation_timestamp
+        uptime_delta = datetime.utcnow().replace(tzinfo=None) - creation_time.replace(tzinfo=None)
+        uptime_str = f"{uptime_delta.days} days"
+
         return {
-            "cluster_version": "v1.28.2+k3s1",
-            "vps_os": "Ubuntu 22.04 LTS",
-            "uptime": "12 days",
-            "status": "Ready"
+            "cluster_version": version_info.git_version,
+            "vps_os": f"{node_info.os_image} ({node_info.kernel_version})",
+            "uptime": uptime_str,
+            "status": "Ready" if any(c.type == 'Ready' and c.status == 'True' for c in node.status.conditions) else "NotReady"
         }
     except Exception as e:
+        print(f"❌ Erreur Status Réel: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# GET DEPLOYMENTS
-# Dans main.py
-@app.get("/api/k3s/deployments/all")
+@app.get("/api/k3s/deployments/all")    
 async def list_all_deployments():
+    """Route de découverte pour la SecurityView (Audit Trivy)"""
+    print("🔍 Discovery: Appel reçu sur /api/k3s/deployments/all")
     try:
-        if not apps_client: return []
+        if not apps_client: 
+            print("❌ Discovery: apps_client n'est pas initialisé")
+            return []
         
-        # On récupère tous les namespaces définis dans l'env
-        # S'il n'y a rien, on laisse la liste vide
-        env_ns = os.getenv("MONITORED_NAMESPACES", "")
-        monitored = env_ns.split(",") if env_ns else []
+        # On utilise le manager pour récupérer la liste brute
+        from k3s_manager import get_cluster_deployments
+        all_deps = get_cluster_deployments()
 
-        deps = apps_client.list_deployment_for_all_namespaces()
-        app_list = []
+        system_ns = [
+            "kube-system", "kube-public", "kube-node-lease", 
+            "local-path-storage", "cert-manager", "ingress-nginx"
+        ]
         
-        # Namespaces système à ignorer pour rester propre (optionnel)
-        system_ns = ["kube-system", "kube-public", "kube-node-lease", "local-path-storage"]
-
-        for dep in deps.items:
-            ns = dep.metadata.namespace
-            
-            # LOGIQUE : 
-            # 1. Si l'utilisateur a spécifié des namespaces -> on filtre
-            # 2. Sinon -> on affiche tout sauf le système
-            if monitored:
-                should_add = ns in monitored
-            else:
-                should_add = ns not in system_ns
-
-            if should_add:
-                app_list.append({
-                    "id": dep.metadata.uid,
-                    "name": dep.metadata.name,
-                    "namespace": ns,
-                    "image": dep.spec.template.spec.containers[0].image
+        final_list = []
+        for dep in all_deps:
+            if dep['namespace'] not in system_ns:
+                final_list.append({
+                    "id": dep.get('id'),
+                    "name": dep.get('name'),
+                    "namespace": dep.get('namespace'),
+                    "image": dep.get('image'),
+                    "status": "Active" # Info requise par ton composant SecurityView.vue
                 })
-        return app_list
+        
+        print(f"✅ Discovery: {len(final_list)} applications prêtes pour le scan")
+        return final_list
+
     except Exception as e:
-        print(f"❌ Discovery Error: {e}")
+        print(f"❌ Discovery Error: {str(e)}")
         return []
 
-# --- ROUTES TRIVY --- 
-@app.post("/api/security/scan")
-async def security_scan(payload: dict, user: dict = Depends(verify_token)):
-    image_name = payload.get("image")
-    if not image_name:
-        raise HTTPException(status_code=400, detail="Image manquante")
-    return run_trivy_scan(image_name)
-
 # --- ROUTES K3S MONITORING ---
-# GET STATUS
-@app.get("/api/k3s/health")
-async def get_cluster_health():
-    return get_k3s_status()
 
 # GET LOGS
 @app.get("/api/k3s/logs/{namespace}/{pod_name}")
@@ -206,6 +228,14 @@ def get_pod_metrics(namespace: str):
     except Exception as e:
         print(f"Metrics Error: {e}")
         return []
+
+# --- ROUTES TRIVY --- 
+@app.post("/api/security/scan")
+async def security_scan(payload: dict, user: dict = Depends(verify_token)):
+    image_name = payload.get("image")
+    if not image_name:
+        raise HTTPException(status_code=400, detail="Image manquante")
+    return run_trivy_scan(image_name)
 
 # --- ROUTES GESTION (MCO) ---
 @app.delete("/api/k3s/restart/{namespace}/{pod_name}")

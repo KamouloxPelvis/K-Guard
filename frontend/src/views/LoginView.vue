@@ -23,7 +23,7 @@ const handleLogin = async (): Promise<void> => {
 
         // 2. On utilise le symbole $ pour injecter la variable dans la string
         const { data } = await axios.post<{ access_token: string }>(
-            `${API_BASE_URL}/api/token`, 
+            `${API_BASE_URL}/k-guard/api/token`, 
             formData
         );
         

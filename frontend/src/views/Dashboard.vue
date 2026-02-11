@@ -31,7 +31,7 @@
     const start = Date.now();
     try {
       
-      const response = await fetch(`${API_CONFIG.baseURL}/api/k3s/health`, {
+      const response = await fetch(`${API_CONFIG.baseURL}/k-guard/api/k3s/health`, {
         headers: API_CONFIG.getHeaders()
       });
       
@@ -53,7 +53,7 @@
     const token = localStorage.getItem('user_token');
     if (!token) return;
 
-    const response = await axios.get(`${API_CONFIG.baseURL}/api/k3s/status`, {
+    const response = await axios.get(`${API_CONFIG.baseURL}/k-guard/api/k3s/status`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

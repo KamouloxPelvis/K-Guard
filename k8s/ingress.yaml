@@ -2,22 +2,22 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: k-guard-ingress
+  namespace: k-guard
   annotations:
-    # kubernetes.io/ingress.class: nginx ### Déprécié ###
+    kubernetes.io/ingress.class: nginx
 spec:
   ingressClassName: nginx
   rules:
-  - host: k-guard.devopsnotes.org
-    http:
+  - http: 
       paths:
-      - path: /api
+      - path: /k-guard/api
         pathType: Prefix
         backend:
           service:
             name: k-guard-service
             port:
               number: 8000
-      - path: /
+      - path: /k-guard
         pathType: Prefix
         backend:
           service:

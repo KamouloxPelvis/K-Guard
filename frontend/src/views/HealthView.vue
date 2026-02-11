@@ -70,7 +70,7 @@
   const fetchClusterData = async () => {
     if (isInitialLoad.value) loading.value = true;
     try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/health`, {
+      const { data } = await axios.get(`${API_CONFIG.baseURL}/k-guard/api/k3s/health`, {
         headers: API_CONFIG.getHeaders()
       });
       apps.value = data;
@@ -114,7 +114,7 @@
   const fetchMetrics = async (namespace: string) => {
     metricsLoading.value[namespace] = true;
     try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/metrics/${namespace}`, {
+      const { data } = await axios.get(`${API_CONFIG.baseURL}/k-guard/api/k3s/metrics/${namespace}`, {
         headers: API_CONFIG.getHeaders()
       });
 
@@ -155,7 +155,7 @@
     podLogs.value = ">> ESTABLISHING SECURE CONNECTION...\n>> DECRYPTING LOG STREAM...";
     try {
       const { data } = await axios.get(
-        `${API_CONFIG.baseURL}/api/k3s/logs/${pod.namespace}/${pod.pod_name}`,
+        `${API_CONFIG.baseURL}/k-guard/api/k3s/logs/${pod.namespace}/${pod.pod_name}`,
         { headers: API_CONFIG.getHeaders() }
       );
       podLogs.value = data.logs || "SYSTEM: No logs available.";
@@ -170,7 +170,7 @@
     if (!confirm(`CAUTION: Restart ${pod.pod_name}?`)) return;
     try {
       await axios.delete(
-        `${API_CONFIG.baseURL}/api/k3s/restart/${pod.namespace}/${pod.pod_name}`,
+        `${API_CONFIG.baseURL}/k-guard/api/k3s/restart/${pod.namespace}/${pod.pod_name}`,
         { headers: API_CONFIG.getHeaders() }
       );
       await fetchClusterData(); 
@@ -183,7 +183,7 @@
     event.stopPropagation();
     if (!confirm(`ACTIVATE REMEDIATION: Scale down ${pod.name}?`)) return;
     try {
-      await axios.post(`${API_CONFIG.baseURL}/api/k3s/remediate/${pod.namespace}/${pod.pod_name}`, {}, {
+      await axios.post(`${API_CONFIG.baseURL}/k-guard/api/k3s/remediate/${pod.namespace}/${pod.pod_name}`, {}, {
         headers: API_CONFIG.getHeaders()
       });
       alert("Remediation signal sent.");

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: k-guard-deployment
-  namespace: default
+  namespace: k-guard
 spec:
   replicas: 1
   selector:
@@ -13,26 +13,43 @@ spec:
       labels:
         app: k-guard
     spec:
-      # 1. Utilisation de l'identité RBAC créée
       serviceAccountName: k-guard-sa
-      
-      # 2. Clé pour ouvrir le registre Cloud GitLab
-      imagePullSecrets:
-        - name: gitlab-k-guard-registry-key
-      
       containers:
+      # --- BACKEND ---
       - name: backend
-        # 3. Image tirée depuis le Cloud
-        image: registry.gitlab.com/portfolio-kamal-guidadou/k-guard/backend:latest
-        imagePullPolicy: Always
+        image: k-guard-backend:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
-        env:
-        - name: KUBECONFIG
-          value: "" # On le vide car load_incluster_config() n'en a pas besoin avec le SA
-      
+        envFrom:
+          - secretRef:
+              name: k-guard-secrets
+        # ✅ AJOUT : Check de santé
+        livenessProbe:
+          httpGet:
+            path: /k-guard/api/
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        # ✅ AJOUT : Limites de ressources
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+
+      # --- FRONTEND ---
       - name: frontend
-        image: registry.gitlab.com/portfolio-kamal-guidadou/k-guard/frontend:latest
-        imagePullPolicy: Always
+        image: k-guard-frontend:latest
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 80 # Nginx sert le front sur le port 80
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
