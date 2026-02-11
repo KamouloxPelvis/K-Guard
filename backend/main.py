@@ -190,11 +190,23 @@ async def get_logs(namespace: str, pod_name: str):
     try:
         if v1 is None: return {"logs": "K8s client not initialized"}
         
-        # On ne spécifie pas de container, K8s prendra le premier par défaut
-        # C'est beaucoup plus adaptable !
+        # 1. On récupère dynamiquement les infos du pod
+        pod = v1.read_namespaced_pod(name=pod_name, namespace=namespace)
+        containers = [c.name for c in pod.spec.containers]
+        
+        # 2. On cherche 'backend' ou 'app', sinon on prend le premier
+        target_container = containers[0] # Par défaut
+        if len(containers) > 1:
+            for c_name in containers:
+                if any(k in c_name.lower() for k in ["backend", "app", "api", "server"]):
+                    target_container = c_name
+                    break
+
+        # 3. On appelle les logs avec le conteneur identifié
         logs = v1.read_namespaced_pod_log(
             name=pod_name,
             namespace=namespace,
+            container=target_container, # Indispensable pour les pods multi-containers
             tail_lines=100
         )
         return {"logs": logs}
@@ -221,8 +233,8 @@ def get_pod_metrics(namespace: str):
             container = item['containers'][0]
             results.append({
                 "pod_name": pod_name,
-                "cpuUsage": container['usage']['cpu'],    # ex: 250000n
-                "memoryUsage": container['usage']['memory'] # ex: 154000Ki
+                "cpuUsage": container['usage']['cpu'],    # ex: 250000n (nanocores)
+                "memoryUsage": container['usage']['memory'] # ex: 154000Ki (kibiobytes)
             })
         return results
     except Exception as e:

@@ -14,24 +14,40 @@ spec:
         app: k-guard
     spec:
       serviceAccountName: k-guard-sa
+      
+      # --- VOLUMES (Pour permettre à Trivy de voir les images du VPS) ---
+      volumes:
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+
       containers:
-      # --- BACKEND ---
+      # --- 1. BACKEND (FastAPI + Trivy) ---
       - name: backend
         image: k-guard-backend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
+        
+        # Montage du socket Docker
+        volumeMounts:
+          - mountPath: /var/run/docker.sock
+            name: docker-socket
+
         envFrom:
           - secretRef:
               name: k-guard-secrets
-        # ✅ AJOUT : Check de santé
+
+        # Check de santé (Liveness)
         livenessProbe:
           httpGet:
             path: /k-guard/api/
             port: 8000
           initialDelaySeconds: 15
           periodSeconds: 20
-        # ✅ AJOUT : Limites de ressources
+
+        # Limites de ressources
         resources:
           limits:
             cpu: "500m"
@@ -40,7 +56,7 @@ spec:
             cpu: "200m"
             memory: "256Mi"
 
-      # --- FRONTEND ---
+      # --- 2. FRONTEND (Vue.js + Nginx) ---
       - name: frontend
         image: k-guard-frontend:latest
         imagePullPolicy: IfNotPresent
