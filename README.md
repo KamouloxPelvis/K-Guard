@@ -3,17 +3,26 @@
 
 K-Guard est un dashboard SRE (Site Reliability Engineering) dédié à l'observabilité et à l'audit de sécurité automatisé pour clusters K3s. Conçu pour offrir une visibilité en temps réel sur l'état de santé des Pods et leur surface d'attaque, K-Guard intègre des fonctions de remédiation immédiates : redémarrage de services, délestage dynamique des réplicas en cas de saturation CPU/RAM, et signalement de mise à jour des images conteneurisées suite à la détection de vulnérabilités critiques.
 
+
 ## 🚀 Fonctionnalités Clés
 
 Health Monitoring : Visualisation dynamique de la charge CPU/RAM avec seuils de criticité intelligents (Bleu/Orange/Rouge).
 
+![Dashboard](frontend/public/screenshots/health_view.png)
+
 Security Audit : Intégration native de Trivy pour le scan de vulnérabilités (CVE) des images conteneurs.
+
+![Update Required View](frontend/public/screenshots/demo_view.png)
 
 Statut Dynamique : Interprétation automatique des niveaux de risque (SECURE, WATCH OUT, UPDATE REQUIRED).
 
 Gestion Opérationnelle : Consultation des logs en temps réel et redémarrage des Pods via une interface sécurisée.
 
+![Dashboard](frontend/public/screenshots/log.png.png)
+
 ### 💡 Astuce scan mode Démo : En maintenant Shift lors d'un clic sur "Launch Scan", K-Guard force l'analyse d'une image volontairement obsolète (nginx:1.18).
+
+![Security View](frontend/public/screenshots/security_view.png)
 
 ## 🛠️ Stack Technique
 
@@ -27,7 +36,9 @@ Infrastructure : Cluster K3s sur VPS Ubuntu.
 
 ## 🛠️ Configuration & Installation (Plug & Play)
 
-Fini les configurations manuelles complexes. K-Guard utilise un assistant d'installation intelligent qui gère la génération des clés de sécurité et le déploiement Kubernetes pour vous.
+![Installation](frontend/public/screenshots/installation.png)
+
+K-Guard utilise un assistant d'installation intelligent qui gère la génération des clés de sécurité et le déploiement Kubernetes :
 
 ### 1. Pré-requis
 Assurez-vous d'avoir installé sur votre VPS :
@@ -71,19 +82,42 @@ Kubernetes Orchestration : Déploie automatiquement les manifests (RBAC, Service
 
 K-Guard is an SRE dashboard designed for observability and automated security auditing within K3s clusters. It provides real-time visibility into Pod health and attack surfaces, featuring immediate remediation tools: service restarts, dynamic replica scaling, and critical vulnerability alerts.
 
+
 ## 🚀 Key Features
 
 Health Monitoring: Dynamic CPU/RAM tracking with intelligent severity thresholds.
 
+![Dashboard](frontend/public/screenshots/health_view.png)
+
 Security Audit: Native Trivy integration for automated CVE scanning.
+
+![Update Required View](frontend/public/screenshots/demo_view.png)
 
 Dynamic Status: Automatic risk level interpretation (SECURE, WATCH OUT, UPDATE REQUIRED).
 
 Ops Management: Real-time log streaming and Pod lifecycle management through a secure UI.
 
+![Dashboard](frontend/public/screenshots/log.png.png)
+
+💡 Demo Mode Hack: By holding Shift while clicking "Launch Scan", K-Guard forces an audit on a legacy image (nginx:1.18) to demonstrate vulnerability detection.
+
+![Security View](frontend/public/screenshots/security_view.png)
+
+🛠️ Tech Stack
+
+Frontend: Vue 3, TypeScript, Tailwind CSS (Immersive "Cyber" UI).
+
+Backend: FastAPI (Python), Kubernetes Python Client (RBAC aware).
+
+Security: Trivy Vulnerability Scanner.
+
+Infrastructure: K3s Cluster running on an Ubuntu VPS.
+
 ## 🛠️ Setup & Deployment (Install & Play)
 
 K-Guard features a Smart Setup Assistant that automates security key generation and Kubernetes orchestration.
+
+![Installation](frontend/public/screenshots/installation.png)
 
 ### 1. Prerequisites
 
