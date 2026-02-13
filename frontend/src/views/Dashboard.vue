@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute } from 'vue-router';
+  import router from "../router/index.ts";
   import axios from 'axios';
 
   interface SystemInfo {
@@ -31,20 +32,21 @@
     const start = Date.now();
     try {
       
-      const response = await fetch(`${API_CONFIG.baseURL}/k-guard/api/k3s/health`, {
+      const response = await axios.get(`${API_CONFIG.baseURL}/api/k3s/health`, {
         headers: API_CONFIG.getHeaders()
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
         systemLatency.value = Date.now() - start;
-        // 'health' renvoie une liste, on prend le premier élément pour le provider
-        vpsProvider.value = data[0]?.namespace || "K3s Node";
+
+        if (response.data && response.data.length > 0) {
+          vpsProvider.value = response.data[0]?.namespace || "K3s Node";
+        }
         clusterInfo.value = "v1.28+k3s"; 
       }
     } catch (e) {
-      console.error("Dashboard: Connection Link Down");
       systemLatency.value = 0;
+      console.warn("[K-Guard] Latency check failed - Server potentially unreachable");
     }
   };
 
@@ -53,7 +55,7 @@
     const token = localStorage.getItem('user_token');
     if (!token) return;
 
-    const response = await axios.get(`${API_CONFIG.baseURL}/k-guard/api/k3s/status`, {
+    const response = await axios.get(`${API_CONFIG.baseURL}/api/k3s/status`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -90,7 +92,7 @@
     localStorage.removeItem('user_token'); // On utilise la même clé partout
     localStorage.removeItem('admin_pseudo'); 
     // On force le rechargement pour nettoyer les états axios/mémoire
-    window.location.href = '/login'; 
+    router.push({ name: 'Login' });
   };
 </script>
 

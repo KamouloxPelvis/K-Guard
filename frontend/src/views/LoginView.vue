@@ -10,7 +10,7 @@ const loading = ref<boolean>(false);
 const router = useRouter();
 
 const handleLogin = async (): Promise<void> => {
-  
+    // 1. On nettoie la récupération de l'URL
     const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
     loading.value = true;
@@ -21,19 +21,20 @@ const handleLogin = async (): Promise<void> => {
         formData.append('username', pseudo.value);
         formData.append('password', password.value);
 
-        // 2. On utilise le symbole $ pour injecter la variable dans la string
         const { data } = await axios.post<{ access_token: string }>(
-            `${API_BASE_URL}/k-guard/api/token`, 
+            `${API_BASE_URL}/api/token`,    
             formData
         );
         
         if (data.access_token) {
             localStorage.setItem('user_token', data.access_token);
-            // On peut aussi stocker le pseudo pour l'affichage dans le dashboard
             localStorage.setItem('admin_pseudo', pseudo.value);
+            
             await router.push('/');
         }
-    } catch (err) {
+    } catch (err: any) {
+      
+        console.error("Login Error:", err.response?.status, err.message);
         error.value = "ACCESS DENIED : INVALID CREDENTIALS";
     } finally {
         loading.value = false;

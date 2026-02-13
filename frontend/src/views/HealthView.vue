@@ -15,49 +15,12 @@
 
   interface PodMetrics {
     pod_name: string;
-    cpuUsage: string;    // Reçoit info bruts en nanocores (n)
-    memoryUsage: string; // Reçoit infos bruts en kilooctets (Ko)
+    cpuUsage: string;    
+    memoryUsage: string; 
   }
 
-  // --- SConversion ---
-
-  // Transforme Nanocores en % (Base: 1 Core = 1,000,000,000n)
-  const calculateCpuPercent = (raw: string | undefined): number => {
-    if (!raw) return 0;
-    console.log("Raw CPU value:", raw);
-    const numericValue = parseInt(raw.replace(/\D/g, '')) || 0;
-    const percent = (numericValue / 1000000000) * 100;
-    return Math.min(percent, 100); 
-  };
-
-  // Transforme Ko en Go
-  const formatMemoryGo = (raw: string | undefined): string => {
-    if (!raw) return '0 Go';
-    const numericValue = parseInt(raw.replace(/\D/g, '')) || 0;
-    return (numericValue / 1048576).toFixed(2) + ' Go';
-  };
-
-  // Pourcentage RAM (Base: 1 Go = 100% pour la jauge)
-  const calculateMemPercent = (raw: string | undefined): number => {
-    if (!raw) return 0;
-    const numericValue = parseInt(raw.replace(/\D/g, '')) || 0;
-    return Math.min((numericValue / 1048576) * 100, 100);
-  };
-
-
+  // --- Configuration ---
   const router = useRouter();
-  const apps = ref<PodStatus[]>([]);
-  const metricsLoading = ref<Record<string, boolean>>({});
-  const loading = ref(false);
-  const isInitialLoad = ref(true);
-  const selectedPod = ref<PodStatus | null>(null);
-  const podLogs = ref("");
-  const showModal = ref(false);
-  const metrics = ref<Record<string, PodMetrics>>(
-  JSON.parse(localStorage.getItem('kguard_metrics') || '{}')
-  );
-    
-  // Configuration API
   const API_CONFIG = {
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
     getHeaders: () => ({
@@ -66,23 +29,103 @@
     })
   };
 
-  // --- Récupération des données ---
+  // --- État Réactif ---
+  const apps = ref<PodStatus[]>([]);
+  const metrics = ref<Record<string, PodMetrics>>(
+    JSON.parse(localStorage.getItem('kguard_metrics') || '{}')
+  );
+  const metricsLoading = ref<Record<string, boolean>>({});
+  const loading = ref(false);
+  const isInitialLoad = ref(true);
+  const selectedPod = ref<PodStatus | null>(null);
+  const podLogs = ref("");
+  const showModal = ref(false);
+  let refreshInterval: any = null;
+
+  // --- Hardware & Calculs ---
+  const nodeCapacity = ref({ 
+    cpu_cores: 2, 
+    memory_total_ki: 8388608 // 8 Go par défaut (Kamal Ref)
+  });
+
+  const fetchNodeCapacity = async () => {
+    try {
+      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/node-capacity`, {
+        headers: API_CONFIG.getHeaders()
+      });
+      nodeCapacity.value = data;
+    } catch (error) {
+      console.warn("⚠️ Utilisation du fallback 2 vCPU/8GB");
+    }
+  };
+
+  const calculateCpuPercent = (raw: string | undefined): number => {
+    if (!raw) return 0;
+    const nanocores = parseInt(raw.replace(/\D/g, '')) || 0;
+    const totalNanocores = nodeCapacity.value.cpu_cores * 1000000000;
+    return (nanocores / totalNanocores) * 100;
+  };
+
+  const calculateMemPercent = (raw: string | undefined): number => {
+    if (!raw) return 0;
+    const kiValue = parseInt(raw.replace(/\D/g, '')) || 0;
+    const percent = (kiValue / nodeCapacity.value.memory_total_ki) * 100;
+    return percent > 0 ? Math.max(percent, 0.5) : 0;
+  };
+
+  const formatMemory = (raw: string | undefined): string => {
+  if (!raw) return '0 Mo';
+  const kiValue = parseInt(raw.replace(/\D/g, '')) || 0;
+  const miValue = kiValue / 1024;
+  
+  // Si moins de 1024 Mo, on affiche en Mo, sinon en Go
+  if (miValue < 1024) {
+    return miValue.toFixed(0) + ' Mo';
+  } else {
+    return (miValue / 1024).toFixed(2) + ' Go';
+  }
+};
+
+  // --- Logique de récupération ---
+  const fetchMetrics = async (namespace: string) => {
+    
+  if (isInitialLoad.value) {
+    metricsLoading.value[namespace] = true;
+  }
+  
+  try {
+    const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/metrics/${namespace}`, {
+      headers: API_CONFIG.getHeaders()
+    });
+    if (Array.isArray(data)) {
+      const updatedMetrics = { ...metrics.value };
+      data.forEach((m: PodMetrics) => {
+        updatedMetrics[m.pod_name] = m;
+      });
+      metrics.value = updatedMetrics;
+      localStorage.setItem('kguard_metrics', JSON.stringify(updatedMetrics));
+    }
+  } catch (e: any) {
+    const status = e.response?.status || 'UNKNOWN';
+    const msg = e.response?.data?.detail || e.message || 'No additional details';
+
+    console.error(`[K-Guard] Error ${status}: ${msg}`, { namespace, error: e });
+  } finally { 
+    metricsLoading.value[namespace] = false;
+  }
+};
+
   const fetchClusterData = async () => {
     if (isInitialLoad.value) loading.value = true;
     try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/k-guard/api/k3s/health`, {
+      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/health`, {
         headers: API_CONFIG.getHeaders()
       });
       apps.value = data;
-      
       const namespaces = [...new Set(data.map((p: PodStatus) => p.namespace))];
       namespaces.forEach(ns => fetchMetrics(ns as string));
-      
     } catch (error: any) {
-      console.error("K-Guard Link Down:", error);
-      
       if (error.response?.status === 401) {
-        console.warn("Session expirée, redirection...");
         localStorage.removeItem('user_token');
         router.push('/login');
       }
@@ -92,119 +135,60 @@
     }
   };
 
-  onMounted(() => {
-    // 1. Premier chargement immédiat
-    fetchClusterData();
-
-    // 2. Mise en place du "pouls" SRE à 5 secondes (5000ms)
-    // On passe de 10s à 5s pour plus de réactivité, comme discuté
-    refreshInterval = setInterval(() => {
-      fetchClusterData();
-      console.log("[K-Guard] Pulse: Syncing cluster & metrics...");
-    }, 5000); 
-  });
-
-  onUnmounted(() => {
-    // 3. Nettoyage pour éviter les fuites de mémoire sur le VPS
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
-    }
-  });
-
-  const fetchMetrics = async (namespace: string) => {
-    metricsLoading.value[namespace] = true;
-    try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/k-guard/api/k3s/metrics/${namespace}`, {
-        headers: API_CONFIG.getHeaders()
-      });
-
-      if (Array.isArray(data)) {
-        // Stratégie "Atomic Update" pour éviter le sautillement à 0
-        const updatedMetrics = { ...metrics.value };
-
-        data.forEach((m: PodMetrics) => {
-          // 1. On stocke par nom complet
-          updatedMetrics[m.pod_name] = m;
-          
-          // 2. On extrait le prefixe de manière sécurisée
-          const parts = m.pod_name.split('-');
-          const shortName: string | undefined = parts[0];
-
-          // 3. On utilise une garde de type pour rassurer TypeScript
-          if (typeof shortName === 'string' && shortName.length > 0) {
-            updatedMetrics[shortName] = m;
-          }
-        });
-
-        // On met à jour l'UI d'un seul coup
-        metrics.value = updatedMetrics;
-        // Persistence pour le prochain rafraîchissement
-        localStorage.setItem('kguard_metrics', JSON.stringify(updatedMetrics));
-      }
-    } catch (e) {
-      console.warn(`[K-Guard] Sync failed for ${namespace}`);
-    } finally {
-      metricsLoading.value[namespace] = false;
-    }
-  };
-
-  // --- Gestion des Logs & Modal ---
+  // --- Actions ---
   const openDetails = async (pod: PodStatus) => {
     selectedPod.value = pod;
     showModal.value = true;
-    podLogs.value = ">> ESTABLISHING SECURE CONNECTION...\n>> DECRYPTING LOG STREAM...";
+    podLogs.value = ">> ESTABLISHING SECURE CONNECTION...";
     try {
-      const { data } = await axios.get(
-        `${API_CONFIG.baseURL}/k-guard/api/k3s/logs/${pod.namespace}/${pod.pod_name}`,
-        { headers: API_CONFIG.getHeaders() }
-      );
-      podLogs.value = data.logs || "SYSTEM: No logs available.";
+      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/logs/${pod.namespace}/${pod.pod_name}`, {
+        headers: API_CONFIG.getHeaders()
+      });
+      podLogs.value = data.logs || "No logs available.";
     } catch (error) {
       podLogs.value = "CRITICAL ERROR: Connection lost.";
     }
   };
 
-  // --- Actions sur les Pods ---
   const restartPod = async (event: Event, pod: PodStatus) => {
     event.stopPropagation(); 
     if (!confirm(`CAUTION: Restart ${pod.pod_name}?`)) return;
     try {
-      await axios.delete(
-        `${API_CONFIG.baseURL}/k-guard/api/k3s/restart/${pod.namespace}/${pod.pod_name}`,
-        { headers: API_CONFIG.getHeaders() }
-      );
-      await fetchClusterData(); 
-    } catch (error) {
-      alert("Action failed. Check API permissions.");
-    }
+      await axios.delete(`${API_CONFIG.baseURL}/api/k3s/restart/${pod.namespace}/${pod.pod_name}`, {
+        headers: API_CONFIG.getHeaders()
+      });
+      fetchClusterData(); 
+    } catch (error) { alert("Action failed."); }
   };
 
   const remediateLoad = async (event: Event, pod: PodStatus) => {
     event.stopPropagation();
     if (!confirm(`ACTIVATE REMEDIATION: Scale down ${pod.name}?`)) return;
     try {
-      await axios.post(`${API_CONFIG.baseURL}/k-guard/api/k3s/remediate/${pod.namespace}/${pod.pod_name}`, {}, {
+      await axios.post(`${API_CONFIG.baseURL}/api/k3s/remediate/${pod.namespace}/${pod.pod_name}`, {}, {
         headers: API_CONFIG.getHeaders()
       });
       alert("Remediation signal sent.");
-    } catch (error) {
-      alert("Remediation failed.");
-    }
+    } catch (error) { alert("Remediation failed."); }
   };
-
-  // --- Cycle de vie ---
-  let refreshInterval: any = null;
-  onMounted(() => {
-    fetchClusterData();
-    refreshInterval = setInterval(fetchClusterData, 10000);
-  });
-  onUnmounted(() => { if (refreshInterval) clearInterval(refreshInterval); });
 
   const getStatusClass = (status: string) => {
     const s = status.toUpperCase();
-    if (s === 'SECURE' || s === 'RUNNING') return 'text-green-500 bg-green-500/10 border-green-500/20';
-    return 'text-red-500 bg-red-500/10 border-red-500/20';
+    return (s === 'SECURE' || s === 'RUNNING') 
+      ? 'text-green-500 bg-green-500/10 border-green-500/20' 
+      : 'text-red-500 bg-red-500/10 border-red-500/20';
   };
+
+  // --- Cycle de vie ---
+  onMounted(() => {
+    fetchNodeCapacity();
+    fetchClusterData();
+    refreshInterval = setInterval(fetchClusterData,30000);
+  });
+
+  onUnmounted(() => {
+    if (refreshInterval) clearInterval(refreshInterval);
+  });
 </script>
 
   <template>
@@ -242,30 +226,31 @@
                   [ SCANNING... ]
                 </span>
                 
-                <span v-else class="text-blue-400 font-mono">
-                  {{ calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage).toFixed(2) }}%
-                </span>
+                <div class="flex justify-between text-[11px] uppercase font-bold tracking-widest">
+                  <span class="text-blue-400 font-mono">
+                    {{ calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage).toFixed(2) }}%
+                  </span>
+                </div>
               </div>
 
               <div class="w-full bg-slate-900 h-1 rounded-full overflow-hidden mt-2">
-                <div 
-                  class="h-full transition-all duration-1000 ease-out"
-                  :class="{
-                    'bg-slate-800 animate-pulse': metricsLoading[pod.namespace],
-                    'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 30,
-                    'bg-[#f05a28]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 30 && calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 60,
-                    'bg-red-600': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 60
-                  }"
-                  :style="{ width: metricsLoading[pod.namespace] ? '100%' : `${calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage)}%` }"
-                ></div>
-              </div>
+              <div 
+                class="h-full transition-all duration-1000 ease-out"
+                :class="{
+                  'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 30,
+                  'bg-[#f05a28]': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 30 && calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) <= 60,
+                  'bg-red-600': calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage) > 60
+                }"
+                :style="{ width: `${calculateCpuPercent(metrics[pod.pod_name]?.cpuUsage)}%` }"
+              ></div>
+            </div>
             </div>
 
             <div class="flex flex-col gap-2">
               <div class="flex justify-between text-[11px] uppercase font-bold tracking-widest">
                 <span class="text-slate-500">Memory Allocation (RAM)</span>
                 <span class="text-indigo-400 font-mono">
-                  {{ formatMemoryGo(metrics[pod.pod_name]?.memoryUsage) }}
+                  {{ formatMemory(metrics[pod.pod_name]?.memoryUsage) }}
                 </span>
               </div>
               <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
@@ -283,9 +268,11 @@
 
           <div class="flex justify-between items-center pt-4 border-t border-slate-800/30 mt-4">
     
-            <button @click.stop="(e) => restartPod(e, pod)" 
-                    class="btn-action btn-restart">
-              Restart
+            <button 
+                @click.stop="(e) => restartPod(e, pod)" 
+                class="px-4 py-2 text-[10px] font-bold uppercase tracking-widest border border-red-500/40 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 rounded-sm cursor-pointer"
+              >
+                Restart
             </button>
             
             <div class="flex gap-2">

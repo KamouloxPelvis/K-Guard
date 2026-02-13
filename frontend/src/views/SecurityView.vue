@@ -200,63 +200,77 @@
       </div>
     </Teleport>
 
-    <div v-if="apps.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+     <div v-if="apps.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div v-for="app in apps" :key="app.id" 
-          class="bg-[#111217] border border-slate-800/40 p-0 transition-all duration-300 hover:border-slate-700 group relative">
+          class="group relative bg-[#181b1f]/60 backdrop-blur-sm border border-slate-800 rounded-sm hover:border-blue-500/40 transition-all flex flex-col h-[520px]">
         
+        <div v-if="loadingApp === app.id" 
+            class="absolute inset-0 z-20 bg-[#0b0c10]/90 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div class="radar-loader mb-4"></div>
+          <p class="text-[10px] font-mono text-blue-500 animate-pulse tracking-[0.2em]">TRIVY ENGINE : SCANNING</p>
+        </div>
+
         <div class="h-[2px] w-full bg-slate-800 group-hover:bg-blue-600 transition-colors duration-500"></div>
 
-        <div class="p-8">
-          <div class="flex justify-between items-center mb-10">
-            <h3 class="text-lg font-medium text-slate-200 tracking-widest uppercase">{{ app.name }}</h3>
+        <div class="p-8 flex flex-col h-full">
+          <div class="flex justify-between items-start mb-6 h-12">
+            <h3 class="text-md font-bold text-slate-200 tracking-widest uppercase leading-tight">{{ app.name }}</h3>
             <span :class="getAppStatus(app.id).class" 
-              class="text-[8px] font-bold px-2 py-1 tracking-[0.2em] uppercase border transition-all duration-500">
-              STATUS: {{ getAppStatus(app.id).text }}
+              class="text-[8px] font-black px-2 py-1 tracking-[0.2em] uppercase border whitespace-nowrap">
+              {{ getAppStatus(app.id).text }}
             </span>
           </div>
 
           <div :class="[
               getAppStatus(app.id).text === 'UPDATE REQUIRED' ? 'bg-red-600' : 
               getAppStatus(app.id).text === 'WATCH OUT' ? 'bg-orange-500' : 
-              'bg-slate-800 group-hover:bg-blue-600'
-            ]" 
-            class="h-[2px] w-full mb-10 transition-colors duration-500">
+              'bg-slate-800'
+            ]" class="h-[1px] w-full mb-8"></div>
+
+          <div class="flex-1">
+            <div v-if="scanResults[app.id]" class="grid grid-cols-2 gap-px bg-slate-800/30 border border-slate-800/30 mb-6">
+              <div class="bg-black/40 p-4 text-center">
+                <p class="text-[8px] text-red-500/80 font-bold uppercase mb-1">Critical</p>
+                <p class="text-3xl text-white font-light">{{ scanResults[app.id]?.summary?.critical ?? 0 }}</p>
+              </div>
+              <div class="bg-black/40 p-4 text-center">
+                <p class="text-[8px] text-orange-500/80 font-bold uppercase mb-1">High</p>
+                <p class="text-3xl text-white font-light">{{ scanResults[app.id]?.summary?.high ?? 0 }}</p>
+              </div>
+            </div>
+            <div v-else class="flex items-center justify-center h-[100px] border border-dashed border-slate-800/50 mb-6 bg-black/10">
+              <p class="text-[9px] text-slate-600 uppercase tracking-widest italic">Awaiting Security Audit</p>
+            </div>
           </div>
 
-          <div v-if="scanResults[app.id]" class="grid grid-cols-2 gap-px bg-slate-800/30 border border-slate-800/30 mb-10">
-            <div class="bg-[#0d0e12] p-6 text-center">
-              <p class="text-[8px] text-red-500/80 font-bold uppercase tracking-[0.3em] mb-3">Critical</p>
-              <p class="text-4xl text-white font-light">{{ scanResults[app.id]?.summary?.critical ?? 0 }}</p>
-            </div>
-            <div class="bg-[#0d0e12] p-6 text-center">
-              <p class="text-[8px] text-orange-500/80 font-bold uppercase tracking-[0.3em] mb-3">High</p>
-              <p class="text-4xl text-white font-light">{{ scanResults[app.id]?.summary?.high ?? 0 }}</p>
-            </div>
-          </div>
-
-          <div class="space-y-4">
+          <div class="space-y-3 mt-auto">
             <button 
               @click="launchScan($event, app.id, app.image)" 
               :disabled="!!loadingApp"  
-              class="w-full py-4 text-[10px] font-bold uppercase tracking-[0.4em] transition-all duration-300 cursor-pointer block text-center"
-              :class="loadingApp === app.id ? 'bg-slate-800 text-slate-600' : 'bg-blue-600 text-white hover:bg-blue-700'"
+              class="w-full py-3 text-[10px] font-bold uppercase tracking-[0.3em] transition-all bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
             >
-              {{ loadingApp === app.id ? 'Running Analysis...' : 'Launch Scan' }}
+              Launch Scan
             </button>
 
-            <button 
-              v-if="scanResults[app.id]?.summary?.critical > 0" 
-              @click="patchApplication(app.namespace, app.name, app.id)"
-              :disabled="patchingApp === app.id"
-              class="w-full py-4 text-[10px] font-bold uppercase tracking-[0.4em] bg-orange-600 text-white hover:bg-orange-700 transition-all cursor-pointer block text-center"
-            >
-              {{ patchingApp === app.id ? 'Updating Cluster...' : '⚠ Patch & Pull Latest' }}
-            </button>
+            <div class="h-10"> 
+              <div class="flex gap-3 mt-4 items-center justify-between">
+                <button 
+                  v-if="scanResults[app.id]" 
+                  @click="openVulnerabilityDetails(app)" 
+                  class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-slate-700 bg-slate-800/30 text-slate-400 hover:border-blue-500/50 hover:text-blue-400 transition-all duration-300 rounded-sm cursor-pointer"
+                >
+                  Full Report
+                </button>
 
-            <button v-if="scanResults[app.id]" @click="openVulnerabilityDetails(app)" 
-                    class="w-full py-3 text-[9px] text-slate-500 hover:text-white border border-transparent hover:border-slate-800 uppercase font-bold tracking-[0.3em] transition-all cursor-pointer">
-              [ Open Report ]
-            </button>
+                <button 
+                  v-if="scanResults[app.id]?.summary?.critical > 0" 
+                  @click="patchApplication(app.namespace, app.name, app.id)"
+                  class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-orange-500/40 bg-orange-500/5 text-orange-500 hover:bg-orange-600 hover:text-white transition-all duration-300 rounded-sm cursor-pointer"
+                >
+                  Patch
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -267,3 +281,37 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+  /* L'animation Radar pour le scan */
+  .radar-loader {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #3b82f6; /* Bleu comme tes boutons */
+    border-radius: 50%;
+    position: relative;
+    animation: pulse-radar 1.5s infinite;
+  }
+
+  .radar-loader::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100%; height: 100%;
+    background: #3b82f6;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.5;
+    animation: inner-pulse 1.5s infinite;
+  }
+
+  @keyframes pulse-radar {
+    0% { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1.3); opacity: 0; }
+  }
+
+  @keyframes inner-pulse {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+  </style>
