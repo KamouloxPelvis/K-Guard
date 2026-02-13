@@ -9,7 +9,6 @@ def run_trivy_scan(image_name: str):
             "trivy", "image", 
             "--format", "json", 
             "--severity", "HIGH,CRITICAL",
-            "--light", 
             image_name
         ]
         
@@ -31,7 +30,13 @@ def run_trivy_scan(image_name: str):
                 "high": len([v for v in vulnerabilities if v['Severity'] == 'HIGH'])
             },
             "vulnerabilities": [
-                {"id": v['VulnerabilityID'], "pkg": v['PkgName'], "severity": v['Severity']}
+                {
+                    "id": v['VulnerabilityID'], 
+                    "pkg": v['PkgName'], 
+                    "severity": v['Severity'],
+                    "installed_version": v.get('InstalledVersion'),
+                    "fixed_version": v.get('FixedVersion') # <-- On ajoute ça !
+                }
                 for v in vulnerabilities
             ]
         }

@@ -1,3 +1,4 @@
+🇺🇸 [English Version below](#english-version)
 
 # 🛡️ K-Guard : Opérateur de Maintenance & Sécurité automatisé pour clusters Kubernetes
 
@@ -18,7 +19,7 @@ Statut Dynamique : Interprétation automatique des niveaux de risque (SECURE, WA
 
 Gestion Opérationnelle : Consultation des logs en temps réel et redémarrage des Pods via une interface sécurisée.
 
-![Dashboard](frontend/public/screenshots/log.png.png)
+![Logs](frontend/public/screenshots/log.png)
 
 ### 💡 Astuce scan mode Démo : En maintenant Shift lors d'un clic sur "Launch Scan", K-Guard force l'analyse d'une image volontairement obsolète (nginx:1.18).
 

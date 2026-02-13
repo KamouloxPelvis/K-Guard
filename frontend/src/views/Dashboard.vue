@@ -84,7 +84,7 @@
 
   const pageTitle = computed(() => {
     if (route.path === '/') return 'System Monitoring';
-    if (route.path === '/security') return 'Vulnerability Audit';
+    if (route.path === '/security') return 'Security';
     return 'Dashboard';
   });
 
@@ -134,7 +134,7 @@
           :class="route.path === '/' ? 'nav-active' : 'nav-inactive'">
           <span class="text-xl">📊</span>
           <div class="flex flex-col md:hidden lg:flex">
-            <span class="text-[11px] font-bold uppercase tracking-widest">Health</span>
+            <span class="text-[11px] font-bold uppercase tracking-widest">System Monitoring</span>
             <span class="text-[8px] text-slate-500 font-mono mt-0.5 uppercase">K3s Cluster Status</span>
           </div>
         </router-link>

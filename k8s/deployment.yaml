@@ -42,20 +42,20 @@ spec:
         # Check de santé (Liveness)
         livenessProbe:
           httpGet:
-            path: /k-guard/api/
+            path: /k-guard/api/k3s/health
             port: 8000
-          initialDelaySeconds: 30 # Plus de temps pour démarrer
-          periodSeconds: 30       # Check moins fréquent
-          failureThreshold: 5
+          initialDelaySeconds: 45
+          periodSeconds: 30      
+          failureThreshold: 3
 
         # Limites de ressources
         resources:
           limits:
-            cpu: "800m"     
-            memory: "1024Mi" 
+            cpu: "1000m"     
+            memory: "1536Mi" 
           requests:
-            cpu: "200m"
-            memory: "512Mi"
+            cpu: "300m"
+            memory: "768Mi"
 
       # --- 2. FRONTEND (Vue.js + Nginx) ---
       - name: frontend
@@ -65,7 +65,7 @@ spec:
         - containerPort: 80
         resources:
           limits:
-            cpu: "800m"     
+            cpu: "200m"     
             memory: "1024Mi" 
           requests:
             cpu: "200m"
