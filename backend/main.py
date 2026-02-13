@@ -25,16 +25,7 @@ origins = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",    
 ]
-origins = [
-    "http://113.30.191.17",
-    "http://113.30.191.17:5173",
-    "http://k-guard.devopsnotes.org",
-    "https://k-guard.devopsnotes.org",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",    
-]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

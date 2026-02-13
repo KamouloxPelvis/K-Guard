@@ -83,56 +83,51 @@
       const response = await api.get(`/api/k3s/patch-logs/${namespace}/${appName}`);
       patchLogs.value = response.data.logs;
     } catch (e) {
-      patchLogs.value += "\n[SYSTEM] Connexion au flux Kubernetes instable...";
+      // Utilisation du terme "handshake" ou "stream" pour faire plus pro
+      patchLogs.value += "\n[SYSTEM] Kubernetes stream connection unstable. Retrying...";
     }
   };
 
   const patchApplication = async (namespace: string, appName: string, appId: string) => {
     const result = scanResults.value[appId];
-
+    
     if (isDemoMode(appId)) {
-      alert("⚠️ ACTION IMPOSSIBLE\n\nCeci est une démo technique (Stress Test).\nCette image n'existe pas réellement dans votre cluster, le patch ne peut donc pas être appliqué.");
+      alert("⚠️ ACTION RESTRICTED\n\nTechnical Demonstration Mode (Stress Test) only.\nThe target image is not present in your cluster; automated patching skipped.");
       return; 
     }
 
     const suggestion = result?.vulnerabilities?.find((v: any) => v.fixed_version)?.fixed_version;
     
     if (!suggestion) {
-      alert("Aucune version de correction automatique trouvée dans le rapport Trivy.");
+      alert("No fix version identified in Trivy security report\n(you probably already have the lastest)");
       return;
     }
 
-    if (result.image === 'nginx:1.18') {
-      alert("⚠️ ACTION IMPOSSIBLE\n\nCeci est une démo technique (Stress Test).\nCette image n'existe pas réellement dans votre cluster, le patch ne peut donc pas être appliqué.");
-      return; 
-    }
-
-    if (!confirm(`🚀 K-Guard suggère : ${suggestion}\nLancer la remédiation pour ${appName} ?`)) return;
+    if (!confirm(`🚀 Trigger automated remediation for ${appName}?`)) return;
 
     // Initialisation UI
     showPatchModal.value = true;
     activePatchApp.value = appName;
-    patchLogs.value = "🚀 K-GUARD ENGINE: Initialisation...\n🛰️ Connexion au cluster K3s...\n📦 Préparation du patch d'image...";
+    patchLogs.value = "🚀 K-GUARD ENGINE: Initializing...\n🛰️ 🛰️ Establishing K3s cluster connection......\n📦 Preparing image patch manifest...";
     patchingApp.value = appId;
 
     try {
-      // 1. Appel API (DRY: Pas de headers, api.ts gère tout)
+      
       await api.post('/api/k3s/patch-image', {
         namespace: namespace,
         deployment: appName,
         new_image: `${result.image.split(':')[0]}:${suggestion}` 
       });
 
-      // 2. Démarrage du streaming des logs (polling toutes les 2s)
       logInterval = setInterval(() => fetchPatchLogs(namespace, appName), 2000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Patch Error:", error);
-      patchLogs.value += "\n❌ ERREUR CRITIQUE: Le backend n'a pas pu appliquer le patch.";
+      // On affiche le détail de l'erreur pour débugger (404 ou 400)
+      const errorMsg = error.response?.data?.detail || "❌ CRITICAL ERROR: Backend failed to apply deployment patch.";
+      patchLogs.value += `\n❌ Critical Error: ${errorMsg}`;
     } finally {
-      // On laisse le modal ouvert pour voir les logs, mais on débloque le bouton
       patchingApp.value = null; 
-      // On nettoie le résultat du scan car l'image va changer
       delete scanResults.value[appId];
     }
   };
@@ -144,7 +139,6 @@
 
   // --- UTILITAIRES D'AFFICHAGE ---
 
-  // Retourne le statut avec typage strict pour éviter l'erreur 'void'
   const getAppStatus = (appId: string): StatusResult => {
     const result = scanResults.value[appId];
     if (!result) return { text: 'IDLE', class: 'text-slate-500 border-slate-800' };
@@ -177,12 +171,11 @@
   <div class="p-8 relative z-10 font-sans">
     
     <header class="mb-12 flex justify-between items-end border-b border-slate-800/40 pb-8">
-      <p class="text-[12px] text-slate-500 mt-6 uppercase tracking-[0.5em]">Vulnerability Monitor & Smart Patch Station</p>
+      <p class="text-[12px] text-slate-500 mt-6 uppercase tracking-[0.5em]">Vulnerability Scan & Smart Patch Station</p>
     </header>
 
     <div class="mb-8 p-4 border border-blue-500/20 bg-blue-500/5 text-xs text-slate-400 italic">
-      Astuce : Shift + clic gauche force le scan sur une image volontairement obsolète Nginx 1.18 pour tester la détection. ( Stress test )
-    </div>
+      Tip: Shift + Left Click forces a scan on an obsolete Nginx 1.18 image to simulate vulnerability detection. (Stress Test Mode)    </div>
 
     <Teleport to="body">
       <div v-if="showVulnerabilityModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
@@ -220,7 +213,7 @@
             </table>
           </div>
           <div class="p-4 border-t border-slate-700 bg-[#121822] text-right">
-            <button @click="showVulnerabilityModal = false" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded uppercase text-[10px] font-bold tracking-widest transition-all">Fermer</button>
+            <button @click="showVulnerabilityModal = false" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded uppercase text-[10px] font-bold tracking-widest transition-all">Close</button>
           </div>
         </div>
       </div>
@@ -248,7 +241,7 @@
 
           <div class="p-4 bg-slate-900/20 text-right">
             <button @click="closePatchModal" class="border border-slate-700 text-slate-400 px-4 py-2 text-[10px] hover:bg-white/5 uppercase font-bold tracking-widest transition-all cursor-pointer">
-              Fermer la console
+              Close Console
             </button>
           </div>
         </div>
@@ -327,7 +320,7 @@
                 @click="openVulnerabilityDetails(app)" 
                 class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-slate-700 bg-slate-800/30 text-slate-400 hover:border-blue-500/50 hover:text-blue-400 transition-all duration-300 rounded-sm cursor-pointer"
               >
-                Full Report
+                View Full Report
               </button>
 
               <button 
@@ -336,7 +329,7 @@
                 :disabled="!!patchingApp"
                 class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border border-orange-500/40 bg-orange-500/5 text-orange-500 hover:bg-orange-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 rounded-sm cursor-pointer"
               >
-                Patch
+                Apply Patch
               </button>
             </div>
           </div>

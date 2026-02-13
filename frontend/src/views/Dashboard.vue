@@ -199,8 +199,8 @@
                 </span>
             </div>
             <button @click="handleLogout" 
-                  class="group flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/60 px-4 py-2 rounded-sm transition-all duration-300 cursor-pointer">
-              <span class="text-xs text-red-500 group-hover:text-red-400 font-bold uppercase tracking-tighter">LogOut</span>
+                  class="group flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-[#f05a28] hover:border-[#f05a28] px-4 py-2 rounded-sm transition-all duration-300 cursor-pointer">
+              <span class="text-xs text-[#f05a28] group-hover:text-[#f05a28] font-bold uppercase tracking-tighter">LogOut</span>
           </button>
         </div>
       </header>
