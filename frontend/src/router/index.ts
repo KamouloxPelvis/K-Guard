@@ -8,17 +8,16 @@ const routes = [
   {
     path: '/',
     component: Dashboard, // Le Dashboard sert de base (Layout)
+    meta: { requiresAuth: true },
     children: [
       {
         path: '', // Route par défaut (/)
         name: 'Health',
-        meta: { requiresAuth: true },
         component: HealthView,
       },
       {
         path: 'security', // Route (/security)
         name: 'Security',
-        meta: { requiresAuth: true },
         component: SecurityView,
       }
     ]
@@ -27,6 +26,10 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('../views/LoginView.vue')
+  },
+  {
+  path: '/:pathMatch(.*)*',
+  redirect: '/'
   }
 ]
 

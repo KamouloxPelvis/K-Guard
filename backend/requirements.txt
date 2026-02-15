@@ -1,19 +1,8 @@
-# --- Framework Core ---
-fastapi==0.115.0
-uvicorn==0.30.0
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
 python-dotenv==1.0.1
-
-# --- Sécurité & Auth (Indispensable pour Kamal) ---
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
+kubernetes==29.0.0
 python-multipart==0.0.9
-
-# --- Kubernetes Orchestration ---
-kubernetes==31.0.0
-urllib3==2.2.0
-
-# --- Utilitaires ---
-requests==2.32.3
-PyYAML==6.0.2
-python-dateutil==2.9.0

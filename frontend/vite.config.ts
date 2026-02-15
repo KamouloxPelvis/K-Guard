@@ -1,32 +1,39 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig({
-  // Crucial : définit le chemin de base pour tous les assets (JS, CSS, Images)
-  base: '/k-guard/', 
+export default defineConfig(({ mode }) => {
   
-  server: {
-    proxy: {
-      // En local, on redirige /k-guard/api vers le backend FastAPI
-      '/k-guard/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/k-guard\/api/, '/api')
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
+    base: '/k-guard/', 
+
+    plugins: [vue()],
+    
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        'crypto': 'crypto-js',
       }
+    },
+
+    server: {
+      port: 5173,
+      proxy: {
+        // On aligne le proxy sur le chemin de l'Ingress
+        '/k-guard/api': {
+          target: env.VITE_API_URL || 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+          // On ne réécrit rien pour que FastAPI reçoive le chemin complet
+        }
+      }
+    },
+
+    define: {
+      // Évite les erreurs avec certaines libs qui cherchent 'global'
+      'global': 'window', 
     }
-  },
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      // On redirige l'appel vers un polyfill ou on le "nullifie" si non critique
-      'crypto': 'crypto-js',
-    }
-  },
-  // Si le problème persiste, on peut aussi définir global
-  define: {
-    'global': {},
-  },
+  }
 })

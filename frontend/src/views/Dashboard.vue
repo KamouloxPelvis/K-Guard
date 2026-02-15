@@ -1,99 +1,70 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted } from 'vue';
-  import { useRoute } from 'vue-router';
-  import router from "../router/index.ts";
-  import axios from 'axios';
+  import { useRoute, useRouter } from 'vue-router';
+  import api from '@/services/api';
 
   interface SystemInfo {
     cluster_version: string;
     vps_os: string;
     uptime: string;
-    latency: string;
+    status: string;
   }
   
   const systemData = ref<SystemInfo | null>(null);
   const systemLatency = ref<number>(0);
-  const vpsProvider = ref<string>("Detecting...");
-  const clusterInfo = ref<string>("Fetching...");
   const pseudo = ref<string>(localStorage.getItem('admin_pseudo') || 'Admin');
   const isMenuOpen = ref(false);
   const route = useRoute();
+  const router = useRouter();
   let statsInterval: any = null;
 
-  const API_CONFIG = {
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-    getHeaders: () => ({
-      Authorization: `Bearer ${localStorage.getItem('user_token')}`,
-      'Content-Type': 'application/json'
-    })
-  };
-
+  // Calcul de la latence et vérification de santé
   const updateSystemStats = async () => {
     const start = Date.now();
     try {
-      
-      const response = await axios.get(`${API_CONFIG.baseURL}/api/k3s/health`, {
-        headers: API_CONFIG.getHeaders()
-      });
-      
+      // On tape sur la route health
+      const response = await api.get('/k3s/health');
       if (response.status === 200) {
         systemLatency.value = Date.now() - start;
-
-        if (response.data && response.data.length > 0) {
-          vpsProvider.value = response.data[0]?.namespace || "K3s Node";
-        }
-        clusterInfo.value = "v1.28+k3s"; 
       }
     } catch (e) {
       systemLatency.value = 0;
-      console.warn("[K-Guard] Latency check failed - Server potentially unreachable");
+      console.warn("[K-Guard] Server heartbeat lost");
     }
   };
 
   const fetchSystemInfo = async () => {
-  try {
-    const token = localStorage.getItem('user_token');
-    if (!token) return;
+    try {
+      const { data } = await api.get('/k3s/status');
+      systemData.value = data;
+    } catch (error) {
+      console.error("Dashboard: Cluster Status Error", error);
+    }
+  };
 
-    const response = await axios.get(`${API_CONFIG.baseURL}/api/k3s/status`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    // On peuple systemData avec les clés renvoyées par main.py
-    systemData.value = response.data; 
-    console.log("✅ System Stats Loaded:", systemData.value);
-  } catch (error) {
-    console.error("Dashboard: Cluster Status Error", error);
-  }
-};
+  const handleLogout = () => {
+    localStorage.removeItem('user_token');
+    localStorage.removeItem('admin_pseudo'); 
+    router.push({ name: 'Login' });
+  };
 
   onMounted(async () => {
+    // Premier chargement
     await fetchSystemInfo();
     await updateSystemStats();
-    statsInterval = setInterval(updateSystemStats, 30000);
+    // Rafraîchissement auto toutes les 30s pour la latence
+    statsInterval = setInterval(updateSystemStats, 20000);
   });
 
   onUnmounted(() => {
-    if (statsInterval) {
-      clearInterval(statsInterval);
-    }
+    if (statsInterval) clearInterval(statsInterval);
   });
 
   const pageTitle = computed(() => {
     if (route.path === '/') return 'System Monitoring';
-    if (route.path === '/security') return 'Security';
-    return 'Dashboard';
+    if (route.path === '/security') return 'Security Audit';
+    return 'K-Guard Dashboard';
   });
-
-  const handleLogout = () => {
-    localStorage.removeItem('user_token'); // On utilise la même clé partout
-    localStorage.removeItem('admin_pseudo'); 
-    // On force le rechargement pour nettoyer les états axios/mémoire
-    router.push({ name: 'Login' });
-  };
 </script>
 
 <template>

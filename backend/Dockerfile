@@ -24,5 +24,5 @@ RUN mkdir -p /root/.cache/trivy
 # Exposition du port FastAPI
 EXPOSE 8000
 
-# Lancement de l'app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Commande de lancement
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips='*'"]

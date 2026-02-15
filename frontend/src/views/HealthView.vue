@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { ref, onMounted, onUnmounted } from 'vue';
-  import { useRouter } from 'vue-router';
-  import axios from 'axios';
+  import api from '@/services/api'; // On utilise l'instance api et non axios
 
   // --- Interfaces ---
   interface PodStatus {
@@ -15,19 +14,9 @@
 
   interface PodMetrics {
     pod_name: string;
-    cpuUsage: string;    
-    memoryUsage: string; 
+    cpuUsage: number;    // Changé en number car le backend envoie de l'entier
+    memoryUsage: number; // Idem
   }
-
-  // --- Configuration ---
-  const router = useRouter();
-  const API_CONFIG = {
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-    getHeaders: () => ({
-      Authorization: `Bearer ${localStorage.getItem('user_token')}`,
-      'Content-Type': 'application/json'
-    })
-  };
 
   // --- État Réactif ---
   const apps = ref<PodStatus[]>([]);
@@ -47,120 +36,128 @@
     memory_total_ki: 8388608 
   });
 
-  // --- Logique métier ---
+  // --- Récupération des données (Utilisation de l'instance 'api') ---
+  
   const fetchNodeCapacity = async () => {
     try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/node-capacity`, {
-        headers: API_CONFIG.getHeaders()
-      });
+      const { data } = await api.get('/k3s/node-capacity');
       nodeCapacity.value = data;
     } catch (error) {
       console.warn("⚠️ Utilisation du fallback 2 vCPU/8GB");
     }
   };
 
-  const calculateCpuPercent = (raw: string | undefined): number => {
-    if (!raw) return 0;
-    const nanocores = parseInt(raw.replace(/\D/g, '')) || 0;
-    const totalNanocores = nodeCapacity.value.cpu_cores * 1000000000;
-    return (nanocores / totalNanocores) * 100;
-  };
-
-  const calculateMemPercent = (raw: string | undefined): number => {
-    if (!raw) return 0;
-    const kiValue = parseInt(raw.replace(/\D/g, '')) || 0;
-    return Math.max((kiValue / nodeCapacity.value.memory_total_ki) * 100, 0.5);
-  };
-
-  const formatMemory = (raw: string | undefined): string => {
-    if (!raw) return '0 Mo';
-    const miValue = (parseInt(raw.replace(/\D/g, '')) || 0) / 1024;
-    return miValue < 1024 ? `${miValue.toFixed(0)} Mo` : `${(miValue / 1024).toFixed(2)} Go`;
-  };
-
   const fetchMetrics = async (namespace: string) => {
     if (isInitialLoad.value) metricsLoading.value[namespace] = true;
     try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/metrics/${namespace}`, {
-        headers: API_CONFIG.getHeaders()
-      });
+      const { data } = await api.get(`/k3s/metrics/${namespace}`);
       if (Array.isArray(data)) {
-        data.forEach((m: PodMetrics) => { metrics.value[m.pod_name] = m; });
+        data.forEach((m: PodMetrics) => { 
+          metrics.value[m.pod_name] = m; 
+        });
         localStorage.setItem('kguard_metrics', JSON.stringify(metrics.value));
       }
-    } catch (e) { console.error("Metrics error", e); }
-    finally { metricsLoading.value[namespace] = false; }
+    } catch (e) { 
+      console.error("Metrics error", e); 
+    } finally { 
+      metricsLoading.value[namespace] = false; 
+    }
   };
 
   const fetchClusterData = async () => {
     if (isInitialLoad.value) loading.value = true;
     try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/health`, {
-        headers: API_CONFIG.getHeaders()
-      });
+      const { data } = await api.get('/k3s/health');
       apps.value = data;
+      // On récupère les métriques pour chaque namespace unique trouvé
       const namespaces = [...new Set(data.map((p: PodStatus) => p.namespace))];
       namespaces.forEach(ns => fetchMetrics(ns as string));
     } catch (error: any) {
-      if (error.response?.status === 401) {
-        localStorage.removeItem('user_token');
-        router.push('/login');
-      }
+      // Les erreurs 401 sont normalement gérées par l'intercepteur api.ts
+      // mais on garde une sécurité ici si besoin
+      console.error("Cluster data fetch error", error);
     } finally {
       loading.value = false;
       isInitialLoad.value = false;
     }
   };
 
+  // --- Logique métier (Backend déjà converti en Millicores et MiB) ---
+  
+  const calculateCpuPercent = (raw: any): number => {
+    if (!raw) return 0;
+    const millicores = typeof raw === 'string' ? parseInt(raw) : raw;
+    const totalMillicores = nodeCapacity.value.cpu_cores * 1000;
+    return (millicores / totalMillicores) * 100;
+  };
+
+  const calculateMemPercent = (raw: any): number => {
+    if (!raw) return 0;
+    const mibValue = typeof raw === 'string' ? parseInt(raw) : raw;
+    const totalMib = nodeCapacity.value.memory_total_ki / 1024;
+    return Math.min((mibValue / totalMib) * 100, 100);
+  };
+
+  const formatMemory = (raw: any): string => {
+    if (!raw) return '0 Mo';
+    const mibValue = typeof raw === 'string' ? parseInt(raw) : raw;
+    return mibValue < 1024 ? `${mibValue} Mo` : `${(mibValue / 1024).toFixed(2)} Go`;
+  };
+
   // --- Actions UI ---
+  
   const openDetails = async (pod: PodStatus) => {
     selectedPod.value = pod;
     showModal.value = true;
     podLogs.value = ">> ESTABLISHING SECURE CONNECTION...";
     try {
-      const { data } = await axios.get(`${API_CONFIG.baseURL}/api/k3s/logs/${pod.namespace}/${pod.pod_name}`, {
-        headers: API_CONFIG.getHeaders()
-      });
+      const { data } = await api.get(`/k3s/logs/${pod.namespace}/${pod.pod_name}`);
       podLogs.value = data.logs || "No logs available.";
-    } catch (error) { podLogs.value = "CRITICAL ERROR: Connection lost."; }
+    } catch (error) { 
+      podLogs.value = "CRITICAL ERROR: Connection lost."; 
+    }
   };
 
   const restartPod = async (event: Event, pod: PodStatus) => {
     event.stopPropagation(); 
     if (!confirm(`CAUTION: Restart ${pod.pod_name}?`)) return;
     try {
-      await axios.delete(`${API_CONFIG.baseURL}/api/k3s/restart/${pod.namespace}/${pod.pod_name}`, {
-        headers: API_CONFIG.getHeaders()
-      });
+      // On utilise le nouveau router 'remediation'
+      await api.delete(`/remediation/restart/${pod.namespace}/${pod.pod_name}`);
       fetchClusterData(); 
-    } catch (error) { alert("Action failed."); }
+    } catch (error) { 
+      alert("Action failed."); 
+    }
   };
 
   const remediateLoad = async (event: Event, pod: PodStatus) => {
     event.stopPropagation();
     if (!confirm(`ACTIVATE REMEDIATION: Scale down ${pod.name}?`)) return;
     try {
-      await axios.post(`${API_CONFIG.baseURL}/api/k3s/remediate/${pod.namespace}/${pod.pod_name}`, {}, {
-        headers: API_CONFIG.getHeaders()
-      });
+      await api.post(`/remediation/remediate/${pod.namespace}/${pod.pod_name}`);
       alert("Remediation signal sent.");
-    } catch (error) { alert("Remediation failed."); }
+    } catch (error) { 
+      alert("Remediation failed."); 
+    }
   };
 
   const getStatusClass = (status: string) => {
     const s = status.toUpperCase();
     return (s === 'SECURE' || s === 'RUNNING') 
       ? 'text-green-500 bg-green-500/10 border-green-500/20' 
-      : 'text-red-500 bg-red-500/10 border-red-500/20';
+      : (s === 'STABILIZING' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20');
   };
 
   onMounted(() => {
     fetchNodeCapacity();
     fetchClusterData();
-    refreshInterval = setInterval(fetchClusterData, 30000);
+    // Rafraîchissement toutes les 15 secondes pour plus de réactivité
+    refreshInterval = setInterval(fetchClusterData, 15000);
   });
 
-  onUnmounted(() => { if (refreshInterval) clearInterval(refreshInterval); });
+  onUnmounted(() => { 
+    if (refreshInterval) clearInterval(refreshInterval); 
+  });
 </script>
 
 <template>

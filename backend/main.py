@@ -1,30 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import os
 
-# Import des routeurs (Note le changement ici)
 import auth
-from routers import k3s, security, remediation 
+from routers import k3s, scan, remediation 
 
 load_dotenv()
 
 app = FastAPI(
-    title="K-Guard API",
+    title="🛡️ K-Guard API",
     root_path="/k-guard"
 )
 
-# --- CORS CONFIG ---
-origins = [
-    "http://113.30.191.17",
-    "http://113.30.191.17:5173",
-    "http://113.30.191.17:5173/k-guard",
-    "http://k-guard.devopsnotes.org",
-    "https://k-guard.devopsnotes.org",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",    
-]
+# CORS Dynamique
+raw_origins = os.getenv("ALLOWED_ORIGINS", "")
+origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+origins += ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,12 +26,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- INCLUSION DES ROUTES ---
-app.include_router(auth.router)         # Routes /api/token
-app.include_router(k3s.router)          # Routes /api/k3s/... (Monitoring)
-app.include_router(remediation.router)  # Routes /api/k3s/restart & remediate
-app.include_router(security.router)     # Routes /api/security/...
+api_router = APIRouter(prefix="/api")
+api_router.include_router(auth.router)         
+api_router.include_router(k3s.router)          
+api_router.include_router(scan.router)
+api_router.include_router(remediation.router)  
+
+app.include_router(api_router)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "service": "k-guard-backend"}
 
 @app.get("/")
 async def root():
-    return {"status": "K-Guard Live", "mode": "Modular Production"}
+    return {"message": "🛡️ K-Guard API is Online"}

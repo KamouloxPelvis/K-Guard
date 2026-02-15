@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { ref, onMounted, onUnmounted } from 'vue';
-  
-  import api from '../services/api'; 
-  import { triggerScan } from '../services/securityService';
+  import api from '@/services/api'; 
 
   // --- INTERFACES ---
   interface AppDeployment {
@@ -12,39 +10,37 @@
     image: string;
   }
 
-  interface StatusResult {
-    text: string;
-    class: string;
-  }
-
   // --- ÉTATS RÉACTIFS ---
   const apps = ref<AppDeployment[]>([]); 
   const isLoadingApps = ref(true);
   const loadingApp = ref<string | null>(null);
-  
-  // États Scan & Vulnérabilités
   const scanResults = ref<Record<string, any>>({});
   const showVulnerabilityModal = ref(false);
   const selectedAppVulnerabilities = ref<any[]>([]);
   const selectedAppName = ref("");
-
-  // États Remédiation (Patch & Logs)
   const patchingApp = ref<string | null>(null);
   const showPatchModal = ref(false);
   const patchLogs = ref("");
   const activePatchApp = ref("");
   let logInterval: any = null;
 
-  // --- FONCTIONS UTILITAIRES ---
-  const isDemoMode = (appId: string) => {
+  const isDemoMode = (appId: string): boolean => {
     return scanResults.value[appId]?.image === 'nginx:1.18';
   };
 
-  // --- 1. CHARGEMENT DES APPS (DRY: Pas de headers manuels) ---
+  const openVulnerabilityDetails = (app: AppDeployment) => {
+  const result = scanResults.value[app.id];
+  if (result?.vulnerabilities) {
+    selectedAppVulnerabilities.value = result.vulnerabilities;
+    selectedAppName.value = app.name;
+    showVulnerabilityModal.value = true;
+  }
+};
+
+  // --- 1. CHARGEMENT DES APPS ---
   const fetchApps = async () => {
     try {
-      // L'intercepteur api.ts injecte le Bearer Token automatiquement
-      const response = await api.get('/api/k3s/deployments/all');
+      const response = await api.get('/k3s/deployments/all');
       apps.value = response.data;
     } catch (error) {
       console.error("🚨 K-Guard Discovery Error:", error);
@@ -58,12 +54,10 @@
     loadingApp.value = appId;
     try {
       let imageToScan = defaultImage;
-      // Cheat code pour la démo
       if (event?.shiftKey) imageToScan = "nginx:1.18"; 
 
-      // Note: triggerScan utilise peut-être encore fetch natif, on passe le token par sécurité
-      const token = localStorage.getItem('user_token');
-      const data = await triggerScan(imageToScan, token || "");
+      // On utilise l'instance api vers notre nouveau router 'scan'
+      const { data } = await api.post('/scan/scan', { image: imageToScan });
       
       if (data.status === 'success') {
         scanResults.value[appId] = data;
@@ -75,60 +69,40 @@
     }
   };
 
-  // --- 3. LOGIQUE DE REMÉDIATION (PATCH INTELLIGENT) ---
-  
-  // Fonction de polling pour récupérer les logs en quasi-temps réel
+  // --- 3. LOGIQUE DE REMÉDIATION ---
   const fetchPatchLogs = async (namespace: string, appName: string) => {
     try {
-      const response = await api.get(`/api/k3s/patch-logs/${namespace}/${appName}`);
+      const response = await api.get(`/remediation/patch-logs/${namespace}/${appName}`);
       patchLogs.value = response.data.logs;
     } catch (e) {
-      // Utilisation du terme "handshake" ou "stream" pour faire plus pro
-      patchLogs.value += "\n[SYSTEM] Kubernetes stream connection unstable. Retrying...";
+      patchLogs.value += "\n[SYSTEM] Kubernetes stream connection unstable...";
     }
   };
 
   const patchApplication = async (namespace: string, appName: string, appId: string) => {
     const result = scanResults.value[appId];
-    
-    if (isDemoMode(appId)) {
-      alert("⚠️ ACTION RESTRICTED\n\nTechnical Demonstration Mode (Stress Test) only.\nThe target image is not present in your cluster; automated patching skipped.");
-      return; 
-    }
-
     const suggestion = result?.vulnerabilities?.find((v: any) => v.fixed_version)?.fixed_version;
     
-    if (!suggestion) {
-      alert("No fix version identified in Trivy security report\n(you probably already have the lastest)");
-      return;
-    }
-
+    if (!suggestion) return alert("No fix version identified.");
     if (!confirm(`🚀 Trigger automated remediation for ${appName}?`)) return;
 
-    // Initialisation UI
     showPatchModal.value = true;
     activePatchApp.value = appName;
-    patchLogs.value = "🚀 K-GUARD ENGINE: Initializing...\n🛰️ 🛰️ Establishing K3s cluster connection......\n📦 Preparing image patch manifest...";
+    patchLogs.value = "🚀 K-GUARD ENGINE: Initializing...\n🛰️ Establishing K3s cluster connection...";
     patchingApp.value = appId;
 
     try {
-      
-      await api.post('/api/k3s/patch-image', {
+      await api.post('/remediation/patch-image', {
         namespace: namespace,
         deployment: appName,
         new_image: `${result.image.split(':')[0]}:${suggestion}` 
       });
 
       logInterval = setInterval(() => fetchPatchLogs(namespace, appName), 2000);
-
     } catch (error: any) {
-      console.error("Patch Error:", error);
-      // On affiche le détail de l'erreur pour débugger (404 ou 400)
-      const errorMsg = error.response?.data?.detail || "❌ CRITICAL ERROR: Backend failed to apply deployment patch.";
-      patchLogs.value += `\n❌ Critical Error: ${errorMsg}`;
+      patchLogs.value += `\n❌ Critical Error: ${error.response?.data?.detail || 'Backend failed'}`;
     } finally {
       patchingApp.value = null; 
-      delete scanResults.value[appId];
     }
   };
 
@@ -137,34 +111,16 @@
     if (logInterval) clearInterval(logInterval);
   };
 
-  // --- UTILITAIRES D'AFFICHAGE ---
-
-  const getAppStatus = (appId: string): StatusResult => {
+  const getAppStatus = (appId: string) => {
     const result = scanResults.value[appId];
     if (!result) return { text: 'IDLE', class: 'text-slate-500 border-slate-800' };
-
     const critical = result.summary?.critical || 0;
-    const high = result.summary?.high || 0;
-
     if (critical > 0) return { text: 'UPDATE REQUIRED', class: 'text-red-500 border-red-500/50 bg-red-500/5' };
-    if (high > 10) return { text: 'WATCH OUT', class: 'text-orange-500 border-orange-500/50 bg-orange-500/5' };
     return { text: 'SECURE', class: 'text-green-500 border-green-500/50 bg-green-500/5' };
   };
 
-  const openVulnerabilityDetails = (app: any) => {
-    const result = scanResults.value[app.id];
-    if (result?.vulnerabilities) {
-      selectedAppVulnerabilities.value = result.vulnerabilities;
-      selectedAppName.value = app.name;
-      showVulnerabilityModal.value = true;
-    }
-  };
-
-  // Lifecycle hooks
   onMounted(fetchApps);
-  onUnmounted(() => {
-    if (logInterval) clearInterval(logInterval);
-  });
+  onUnmounted(() => { if (logInterval) clearInterval(logInterval); });
 </script>
 
 <template>

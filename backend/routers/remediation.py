@@ -2,49 +2,55 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from auth import verify_token
 from database import v1, apps_client
 from metrics_manager import scale_down_deployment
+from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/k3s", tags=["Management"])
+router = APIRouter(prefix="/remediation", tags=["Management"])
+
+class PatchImagePayload(BaseModel):
+    namespace: str
+    deployment: str
+    new_image: str
 
 @router.delete("/restart/{namespace}/{pod_name}")
 async def restart_pod(namespace: str, pod_name: str, user: dict = Depends(verify_token)):
+    """Supprime un pod pour forcer K3s à le recréer (Rolling Restart sauvage)"""
     try:
-        v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
-        return {"status": "success", "message": f"Pod {pod_name} supprimé (re-pull en cours)"}
+        # On ajoute la suppression immédiate
+        v1.delete_namespaced_pod(name=pod_name, namespace=namespace, grace_period_seconds=0)
+        return {"status": "success", "message": f"Pod {pod_name} supprimé. K3s va le recréer immédiatement."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @router.post("/remediate/{namespace}/{pod_name}")
 async def remediate_pod(namespace: str, pod_name: str, user: dict = Depends(verify_token)):
-    """Déclenche une remédiation SRE (Scale Down)"""
+    """Déclenche une remédiation SRE (Scale Down à 0)"""
     try:
+        # On s'assure que scale_down_deployment gère bien l'in-cluster config
         result = await scale_down_deployment(namespace, pod_name)
-        return result
+        return result   
     except Exception as e:
-        print(f"❌ Remediate Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Erreur de remédiation : {str(e)}")
 
 @router.post("/patch-image")
 async def patch_deployment_image(
-    payload: dict = Body(...), 
+    payload: PatchImagePayload, # Utilisation de Pydantic pour la validation
     user: dict = Depends(verify_token)
 ):
     """
-    Met à jour l'image d'un déploiement (Remédiation intelligente)
-    Format attendu : {"namespace": "...", "deployment": "...", "new_image": "..."}
+    Met à jour l'image d'un déploiement (Mise à jour de sécurité)
     """
-    namespace = payload.get("namespace")
-    deployment_name = payload.get("deployment")
-    new_image = payload.get("new_image")
-
-    if not all([namespace, deployment_name, new_image]):
-        raise HTTPException(status_code=400, detail="Paramètres manquants (ns, deployment, image)")
-
     try:
-        # 1. On récupère le déploiement actuel pour trouver le conteneur
-        deployment = apps_client.read_namespaced_deployment(name=deployment_name, namespace=namespace)
+        # 1. On récupère le déploiement
+        deployment = apps_client.read_namespaced_deployment(name=payload.deployment, namespace=payload.namespace)
+        
+        # 2. On identifie dynamiquement le conteneur (plus robuste)
+        # On cherche un conteneur qui n'est pas un 'sidecar' ou on prend le premier si un seul
         container_name = deployment.spec.template.spec.containers[0].name
+        if len(deployment.spec.template.spec.containers) > 1:
+             # Si plusieurs conteneurs, on peut loguer pour debug ou affiner la logique
+             print(f"⚠️ Multi-container detected for {payload.deployment}, patching first: {container_name}")
 
-        # 2. Préparation du patch
+        # 3. Application du patch stratégique (Strategic Merge Patch)
         body = {
             "spec": {
                 "template": {
@@ -52,7 +58,7 @@ async def patch_deployment_image(
                         "containers": [
                             {
                                 "name": container_name,
-                                "image": new_image
+                                "image": payload.new_image
                             }
                         ]
                     }
@@ -60,36 +66,30 @@ async def patch_deployment_image(
             }
         }
 
-        # 3. Application du patch sur Kubernetes
         apps_client.patch_namespaced_deployment(
-            name=deployment_name,
-            namespace=namespace,
+            name=payload.deployment,
+            namespace=payload.namespace,
             body=body
         )
 
         return {
             "status": "success", 
-            "message": f"Mise à jour vers {new_image} lancée pour {deployment_name}"
+            "message": f"Update vers {payload.new_image} en cours..."
         }
-
     except Exception as e:
-        print(f"❌ Patch Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Logs du patch en streaming                                                                                                                                                                                            
 @router.get("/patch-logs/{namespace}/{deployment_name}")
 async def get_patch_events(namespace: str, deployment_name: str, user: dict = Depends(verify_token)):
-    """
-    Récupère les événements récents liés au déploiement pour simuler un log d'update.
-    """
+    """Récupère les derniers événements K3s liés au déploiement"""
     try:
-        # On récupère les événements du namespace filtrés sur le déploiement
         events = v1.list_namespaced_event(namespace)
+        # Filtrage intelligent sur les événements liés au déploiement
         relevant_events = [
-            f"[{e.last_timestamp}] {e.message}" 
+            f"[{e.last_timestamp.strftime('%H:%M:%S') if e.last_timestamp else '?'}] {e.message}" 
             for e in events.items 
-            if deployment_name in e.involved_object.name
+            if e.involved_object and deployment_name in e.involved_object.name
         ]
-        return {"logs": "\n".join(relevant_events[-15:])} # Les 15 derniers événements
+        return {"logs": "\n".join(relevant_events[-15:])}
     except Exception as e:
-        return {"logs": f"En attente des logs Kubernetes... ({str(e)})"}
+        return {"logs": f"Erreur de lecture des événements : {str(e)}"}

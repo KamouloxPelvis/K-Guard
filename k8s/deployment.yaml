@@ -42,9 +42,9 @@ spec:
         # Check de santé (Liveness)
         livenessProbe:
           httpGet:
-            path: /k-guard/api/k3s/health
+            path: /health
             port: 8000
-          initialDelaySeconds: 45
+          initialDelaySeconds: 20
           periodSeconds: 30      
           failureThreshold: 3
 

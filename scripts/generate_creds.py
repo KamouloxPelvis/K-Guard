@@ -32,6 +32,7 @@ def run_wizard(domain=None, password=None):
         "USER_DOMAIN=": f"USER_DOMAIN={final_domain}\n",
         "SECRET_KEY=": f"SECRET_KEY={secret_key}\n",
         "ADMIN_PASSWORD_HASH=": f"ADMIN_PASSWORD_HASH={password_hash}\n"
+        "ALLOWED_ORIGINS="= f"ALLOWED_ORIGINS=http://{final_domain},https://{final_domain}\n"
     }
 
     if os.path.exists(example_path):

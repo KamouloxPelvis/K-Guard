@@ -9,7 +9,12 @@ from k3s_manager import get_k3s_status, get_cluster_deployments
 from metrics_manager import get_pod_metrics
 
 # Note : On met le prefix ici pour éviter de le répéter
-router = APIRouter(prefix="/api/k3s", tags=["K3s Monitoring"])
+router = APIRouter(prefix="/k3s", tags=["K3s Monitoring"])
+
+# --- GET HEALTH ---
+@router.get("/health")
+async def get_cluster_health():
+    return get_k3s_status()
 
 # --- GET CPU/RAM VPS RESOURCES ---
 @router.get("/node-capacity")
@@ -27,7 +32,7 @@ async def get_node_capacity(user: dict = Depends(verify_token)):
 
 # --- GET DEPLOYMENTS ---
 @router.get("/deployments/all")    
-async def list_all_deployments():
+async def list_all_deployments(user: dict = Depends(verify_token)):
     """Route de découverte pour la SecurityView (Audit Trivy)"""
     try:
         if not apps_client: return []
@@ -49,11 +54,6 @@ async def list_all_deployments():
     except Exception as e:
         print(f"❌ Discovery Error: {str(e)}")
         return []
-
-# --- GET HEALTH ---
-@router.get("/health")
-async def get_cluster_health():
-    return get_k3s_status()
 
 # --- GET STATUS ---
 @router.get("/status")
@@ -82,7 +82,7 @@ async def get_cluster_status(user: dict = Depends(verify_token)):
 
 # --- GET LOGS ---
 @router.get("/logs/{namespace}/{pod_name}")
-async def get_logs(namespace: str, pod_name: str):
+async def get_logs(namespace: str, pod_name: str, user: dict = Depends(verify_token)):
     try:
         if v1 is None: return {"logs": "K8s client not initialized"}
         
@@ -103,7 +103,7 @@ async def get_logs(namespace: str, pod_name: str):
     except Exception as e:
         return {"logs": f"ERROR: {str(e)}"}
 
-# --- GET METRICS ---
+# --- GET METRICS ---user: dict = Depends(verify_token)
 @router.get("/metrics/{namespace}")
 async def get_metrics(namespace: str, user: dict = Depends(verify_token)):
     return get_pod_metrics(namespace)

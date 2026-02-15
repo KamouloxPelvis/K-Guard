@@ -9,6 +9,9 @@
 # On s'assure d'être dans le dossier racine du projet
 cd "$(dirname "$0")/.." || exit
 
+# On s'assure aussi que Gum est bien installé sur la machine/VPS de l'utilisateur
+command -v gum >/dev/null 2>&1 || { echo "Veuillez installer 'gum' d'abord."; exit 1; }
+
 # Chargement de la config existante
 if [ -f "backend/.env" ]; then
     source backend/.env
@@ -29,8 +32,10 @@ gum style \
     "🛡️  K-GUARD " "K3S MONITOR & SECURITY OPERATOR" "Target: http://$TARGET_URL/k-guard"
 
 # 1. CLEANING
-gum spin --spinner dot --title "Purging old namespace..." -- \
-    kubectl delete namespace k-guard --ignore-not-found=true
+    if kubectl get namespace k-guard >/dev/null 2>&1; then
+        gum spin --spinner dot --title "Purging old namespace..." -- \
+            kubectl delete namespace k-guard --wait=true
+    fi
 gum style --foreground 82 "  ✓ Environment cleared"
 
 # 2. BUILDING
@@ -100,5 +105,7 @@ else
     # On affiche les logs du backend pour comprendre pourquoi ça a planté
     echo "📋 Backend Logs :"
     kubectl logs -l app=k-guard -c backend -n k-guard --tail=20
+    echo "📋 Recent Events :"
+    kubectl get events -n k-guard --sort-by='.lastTimestamp' | tail -n 10
     exit 1
 fi

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import api from '@/services/api'; 
 
 const pseudo = ref<string>('');
 const password = ref<string>('');
@@ -10,30 +10,30 @@ const loading = ref<boolean>(false);
 const router = useRouter();
 
 const handleLogin = async (): Promise<void> => {
-    // 1. On nettoie la récupération de l'URL
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
     loading.value = true;
     error.value = '';
 
     try {
-        const formData = new FormData();
-        formData.append('username', pseudo.value);
-        formData.append('password', password.value);
+        // OAuth2 en FastAPI attend ce format spécifique
+        const params = new URLSearchParams();
+        params.append('username', pseudo.value);
+        params.append('password', password.value);
 
-        const { data } = await axios.post<{ access_token: string }>(
-            `${API_BASE_URL}/api/token`,    
-            formData
+        // On utilise 'api' et non 'axios'. 
+        // Si ton baseURL dans api.ts est http://113.30.191.17/k-guard
+        // alors l'appel vers '/api/token' donnera la bonne URL.
+        const { data } = await api.post<{ access_token: string }>(
+            '/api/token',    
+            params
         );
         
         if (data.access_token) {
             localStorage.setItem('user_token', data.access_token);
-            localStorage.setItem('admin_pseudo', pseudo.value);
+            localStorage.setItem('admin_pseudo', pseudo.value); 
             
             await router.push('/');
         }
     } catch (err: any) {
-      
         console.error("Login Error:", err.response?.status, err.message);
         error.value = "ACCESS DENIED : INVALID CREDENTIALS";
     } finally {

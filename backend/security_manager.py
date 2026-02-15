@@ -12,7 +12,7 @@ def run_trivy_scan(image_name: str):
             image_name
         ]
         
-        process = subprocess.run(command, capture_output=True, text=True)
+        process = subprocess.run(command, capture_output=True, text=True, timeout=180)
         
         if process.returncode != 0:
             return {"status": "error", "message": process.stderr}
