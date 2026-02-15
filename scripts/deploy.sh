@@ -42,11 +42,11 @@ gum style --foreground 82 "  ✓ Environment cleared"
 gum style --foreground 212 "🏗️  Starting Binary Builds..."
 
 gum spin --spinner pulse --title "Compiling Backend Engine..." -- \
-    docker build -t k-guard-backend:latest ./backend
+    docker build --no-cache -t k-guard-backend:latest ./backend
 
 # CRUCIAL : Injection de l'URL API pour Vite (Format: http://IP/k-guard)
 gum spin --spinner pulse --title "Compiling Frontend Interface..." -- \
-    docker build --build-arg VITE_API_URL="http://$TARGET_URL/k-guard" -t k-guard-frontend:latest ./frontend
+    docker build --no-cache --build-arg VITE_API_URL="http://$TARGET_URL/k-guard" -t k-guard-frontend:latest ./frontend
 
 # Vérification immédiate du build
 if [[ "$(docker images -q k-guard-frontend:latest 2> /dev/null)" == "" ]]; then
