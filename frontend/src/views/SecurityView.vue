@@ -89,23 +89,24 @@
     </header>
 
     <div class="flex-1 overflow-hidden relative">
-      <div v-if="activeTab === 'dashboard'" class="h-full flex flex-col">
-      
-      <div class="p-2 flex-none border-b border-slate-800/50">
-        <select v-model="selectedRange" 
-                class="bg-[#111217] border border-slate-700 text-[9px] px-2 py-0.5 rounded uppercase font-bold tracking-widest cursor-pointer text-white hover:border-slate-500 transition-colors">
-          <option value="now-15m">Last 15m</option>
-          <option value="now-1h">Last 1h</option>
-          <option value="now-24h">Last 24h</option>
-        </select>
+      <div v-if="activeTab === 'dashboard'" class="h-full flex flex-col p-2">
+        <div class="flex-1 border border-slate-800 bg-[#0b0c10] overflow-hidden flex flex-col">
+          <div class="p-2 flex-none border-b border-slate-800/50">
+            <select v-model="selectedRange" 
+                    class="bg-[#111217] border border-slate-700 text-[9px] px-2 py-0.5 rounded uppercase font-bold tracking-widest cursor-pointer text-white hover:border-slate-500 transition-colors">
+              <option value="now-15m">Last 15m</option>
+              <option value="now-1h">Last 1h</option>
+              <option value="now-24h">Last 24h</option>
+            </select>
+          </div>
+        
+          <iframe 
+            :src="dashboardSrc" 
+            class="w-full flex-1 border-0" 
+            title="Runtime Security Dashboard">
+          </iframe>
+        </div>
       </div>
-      
-      <iframe 
-        :src="dashboardSrc" 
-        class="w-full flex-1 border-0" 
-        title="Runtime Security Dashboard">
-      </iframe>
-    </div>
 
       <div v-else class="overflow-y-auto h-full">
         <h2 class="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-2">Live Alert Feed</h2>
