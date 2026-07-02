@@ -18,7 +18,7 @@
 
   // --- CONFIGURATION ---
   // Base URL from your Share/Embed code (removing the hardcoded time parameters)
-  const kibanaBaseUrl = "/kibana/app/dashboards#/view/ea2db5ff-ddd9-41c7-9715-865cfe0a5d35";
+  const kibanaBaseUrl = window.location.origin + "/kibana/app/dashboards#/view/ea2db5ff-ddd9-41c7-9715-865cfe0a5d35";
 
   // Computed source that dynamically injects the chosen time range
   const dashboardSrc = computed(() => {

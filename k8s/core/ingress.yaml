@@ -10,19 +10,19 @@ spec:
   rules:
   - http:
       paths:
-      # 1. K-Guard Frontend
-      - path: /
+      # 1. Kibana : On capture tout après /kibana/
+      - path: /kibana/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: kibana-kb-http
+            port:
+              number: 5601
+      # 2. K-Guard Frontend : Capture tout le reste
+      - path: /(.*)
         pathType: Prefix
         backend:
           service:
             name: k-guard-service
             port:
               number: 8000
-      # 2. Kibana Service (redirected from /kibana)
-      - path: /kibana/(.*)
-        pathType: Prefix
-        backend:
-          service:
-            name: kibana-service
-            port:
-              number: 5601
