@@ -66,10 +66,9 @@
 
 <template>
   <div class="flex flex-col h-full overflow-hidden">
-    <header class="flex-none border-b border-slate-800 pb-4">
+    <header class="flex-none border-b border-slate-800 pb-4 px-4">
       <div class="flex justify-between items-end">
         <div>
-          <h1 class="text-xl font-bold tracking-widest uppercase">Security Operations Center</h1>
           <p class="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Real-time Falco & ELK Monitoring</p>
         </div>
 
