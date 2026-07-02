@@ -88,7 +88,7 @@
       </div>
     </header>
 
-    <div class="min-h-[600px]">
+    <div class="h-full flex flex-col">
       
       <div v-if="activeTab === 'dashboard'" 
           class="bg-[#0b0c10] border border-slate-800/60 rounded-sm w-full h-full flex flex-col">
