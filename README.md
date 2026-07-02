@@ -48,23 +48,19 @@ K-Guard integrates a dedicated **Runtime Security Operations Center (SOC)** powe
 * **Security Dashboarding**: Visualize threat activity heatmaps, container security audits, and severity distributions.
 * **Live Alert Feed**: Real-time monitoring of security violations, with automated persistence in the cluster.
 
-![K-Guard Runtime SOC](frontend/public/screenshots/kguard-soc-dashboard.png)
+![K-Guard Runtime SOC](frontend/public/screenshots/kguard-security.png)
 
 * **Network Sentinel**: Implements idempotent Zero-Trust NetworkPolicies via Ansible playbooks.
 
-![K-Guard System Overview](frontend/public/screenshots/kguard-5.png)
+![K-Guard System Overview](frontend/public/screenshots/kguard-network_map-1.png)
 
 * **Cisco Webex ChatOps**: Real-time incident alerting with persistent integration settings in SQLite.
 
-![K-Guard System Overview](frontend/public/screenshots/kguard-10.png)
-
-![K-Guard System Overview](frontend/public/screenshots/kguard-12.png)
+![K-Guard System Overview](frontend/public/screenshots/kguard-settings.png)
 
 * **SRE Control Center**: Live monitoring of cluster latency, storage diagnostics, and pod health.
 
-![K-Guard System Overview](frontend/public/screenshots/kguard-1.png)
-
-![K-Guard System Overview](frontend/public/screenshots/kguard-2.png)
+![K-Guard System Overview](frontend/public/screenshots/kguard-network_map-2.png)
 
 ---
 
@@ -81,7 +77,7 @@ K-Guard automatically generates interactive API documentation using **Swagger UI
 
 ## 🛠️ <a name="en-installation--setup"></a>Installation & Setup
 
-![K-Guard System Overview](frontend/public/screenshots/install.png)
+![K-Guard System Overview](frontend/public/screenshots/kguard-install.png)
 
 ### 📋 Prerequisites
 
@@ -126,6 +122,8 @@ chmod +x install-kguard
 
 ## 4. <a name="en-accessing-dashboard"></a>Accessing the Dashboard & ELK
 
+![K-Guard System Overview](frontend/public/screenshots/kguard-system_overview-1.png)
+
 Once the deployment is finalized, K-Guard and the ELK stack are exposed via your cluster Ingress.
 
 * K-Guard Dashboard: Navigate to http://<VPS_IP> (or your configured hostname).
@@ -150,7 +148,7 @@ Transform technical security audits into real-time operational alerts :
 2.  **Configure**: Enter your `Bot Access Token` and your `Target Room ID`.
 3.  **Validate**: Settings are persisted in the `kguard.db` SQLite database only after a successful connectivity test.
 
-![K-Guard System Overview](frontend/public/screenshots/kguard-9.png)
+![K-Guard System Overview](frontend/public/screenshots/kguard-webex.png)
 
 ---
 
@@ -176,8 +174,6 @@ Through the **"Deploy Hardening"** feature in the Settings panel, users can trig
 * **Visual Topology**: Real-time identification of vulnerable or isolated nodes.
 * **One-Click Hardening**: Instantly applies the entire Ansible-driven security suite to the cluster.
 * **Diagnostic Sentinel**: Integrated connectivity audit to verify that policies are effective but not disruptive.
-
-![K-Guard Network Sentinel](frontend/public/screenshots/kguard-6.png)
 
 ---
 
