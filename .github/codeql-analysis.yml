@@ -25,8 +25,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Added 'go' to cover the K-Guard installer components
-        language: [ 'python', 'javascript', 'go' ]
+        include:
+          - language: python
+            build-mode: none
+          - language: javascript
+            build-mode: none
+          - language: go
+            build-mode: manual 
 
     steps:
       - name: Checkout repository
@@ -38,9 +43,13 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
 
-      # Autobuild is effective for Go to ensure the installer's logic is fully scanned
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      # Specific installation for Go
+      - name: Setup Go and Download Dependencies
+        if: matrix.language == 'go'
+        run: |
+          go version
+          go mod download
+          go build ./... # Force la compilation pour que CodeQL indexe les dépendances
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
