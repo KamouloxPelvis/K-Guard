@@ -5,21 +5,22 @@ metadata:
   namespace: k-guard
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    # Désactive le rewrite globalement ici si ton app frontend ne le supporte pas, 
+    # ou gère le rewrite uniquement pour le frontend avec une configuration plus fine
 spec:
   rules:
   - http:
       paths:
-      # 1. Kibana : On capture tout après /kibana/
-      - path: /kibana/(.*)
+      # Kibana: on force l'absence de réécriture
+      - path: /kibana
         pathType: Prefix
         backend:
           service:
             name: kibana-kb-http
             port:
               number: 5601
-      # 2. K-Guard Frontend : Capture tout le reste
-      - path: /(.*)
+      # Frontend: Ton app
+      - path: /
         pathType: Prefix
         backend:
           service:
