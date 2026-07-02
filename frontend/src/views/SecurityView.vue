@@ -65,8 +65,8 @@
 </script>
 
 <template>
-  <div class="px-2 lg:px-4 space-y-6">
-    <header class="border-b border-slate-800 pb-4">
+  <div class="flex flex-col h-full overflow-hidden">
+    <header class="flex-none border-b border-slate-800 pb-4">
       <div class="flex justify-between items-end">
         <div>
           <h1 class="text-xl font-bold tracking-widest uppercase">Security Operations Center</h1>
@@ -88,10 +88,8 @@
       </div>
     </header>
 
-    <div class="h-full flex flex-col">
-      
-      <div v-if="activeTab === 'dashboard'" 
-          class="bg-[#0b0c10] border border-slate-800/60 rounded-sm w-full h-full flex flex-col">
+    <div class="flex-1 overflow-hidden relative">
+      <div v-if="activeTab === 'dashboard'" class="h-full flex flex-col">
       
       <div class="p-2 flex-none border-b border-slate-800/50">
         <select v-model="selectedRange" 
@@ -104,12 +102,12 @@
       
       <iframe 
         :src="dashboardSrc" 
-        class="flex-1 w-full border-0" 
+        class="w-full flex-1 border-0" 
         title="Runtime Security Dashboard">
       </iframe>
     </div>
 
-      <div v-else class="grid gap-3 animate-in fade-in duration-500">
+      <div v-else class="overflow-y-auto h-full">
         <h2 class="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-2">Live Alert Feed</h2>
         <div v-for="alert in alerts" :key="alert.id" 
              class="bg-[#181b1f] border-l-2 border-red-500 p-4 flex justify-between items-center hover:bg-[#1e2329] transition-all">
