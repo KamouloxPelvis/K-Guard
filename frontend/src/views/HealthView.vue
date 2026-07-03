@@ -268,23 +268,28 @@
     </div>
 
     <Teleport to="body">
-      <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
-        <div class="bg-[#0d0e12] border border-slate-800 w-full max-w-5xl h-[85vh] flex flex-col rounded-sm">
-          <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-[#181b1f]">
-            <span class="text-[9px] font-mono text-blue-400 uppercase tracking-widest">
-              Secure Console // {{ selectedPod?.pod_name }}
-            </span>
-            <button @click="showModal = false" class="text-slate-500 hover:text-white text-xl">&times;</button>
-          </div>
-          <div class="flex-1 p-4 overflow-y-auto font-mono text-[11px] text-blue-100/80 bg-black/40">
-            <pre class="whitespace-pre-wrap">{{ podLogs }}</pre>
-          </div>
-          <div class="p-2 border-t border-slate-900 bg-black/40 flex justify-between items-center">
-            <span class="text-[7px] text-slate-600 uppercase font-bold">K-Guard Terminal v2.0</span>
-            <span class="text-[7px] text-blue-900 font-mono">Operator @ {{ username }}</span>
-          </div>
-        </div>
+  <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+    <div class="bg-[#0d0e12] border border-slate-800 w-full max-w-5xl h-[85vh] flex flex-col rounded-sm shadow-2xl">
+      
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-[#111217]">
+        <span class="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em]">
+          Secure Log Stream // {{ selectedPod?.pod_name }}
+        </span>
+        <button @click="showModal = false" class="text-slate-500 hover:text-white text-lg transition-colors">&times;</button>
       </div>
-    </Teleport>
+
+      <div class="flex-1 p-6 overflow-y-auto bg-[#0a0a0c]">
+        <pre class="whitespace-pre-wrap break-words text-xs md:text-sm font-mono text-emerald-500 leading-relaxed">
+          {{ podLogs }}
+        </pre>
+      </div>
+
+      <div class="p-3 border-t border-slate-900 bg-[#0d0e12] flex justify-between items-center">
+        <span class="text-[9px] text-slate-600 uppercase font-bold tracking-widest">K-Guard Engine // Terminal V2</span>
+        <span class="text-[9px] text-blue-900 font-mono italic">Ready</span>
+      </div>
+    </div>
+  </div>
+</Teleport>
   </div>
 </template>

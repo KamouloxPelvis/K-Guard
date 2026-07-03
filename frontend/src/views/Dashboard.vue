@@ -98,7 +98,7 @@
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#0b0c10] text-slate-300 font-sans flex">
+  <div class="h-screen w-screen bg-[#0b0c10] text-slate-300 font-sans flex overflow-hidden">
     
     <Transition name="fade">
       <div v-if="isMenuOpen" 
@@ -172,7 +172,7 @@
       </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-h-0 min-w-0 relative">
+    <main class="flex-1 flex flex-col min-h-0 overflow-y-auto">
       <div class="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
         <div class="w-[400px] h-[400px] border border-blue-500/5 rounded-full absolute"></div>
         <img src="/logo_background.png" alt="K-Guard" class="w-[350px] opacity-[0.05] pointer-events-none select-none" />
