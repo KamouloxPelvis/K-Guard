@@ -185,10 +185,11 @@
       <div>
         <p class="text-[10px] text-slate-500 uppercase tracking-[0.4em]">K-Guard SRE Monitor</p>
       </div>
-      <div class="flex gap-3">
-        <button @click="fetchClusterData" class="bg-slate-800/40 hover:bg-blue-600 border border-slate-700 px-4 py-1.5 rounded-sm transition-all text-[9px] font-bold text-slate-400 hover:text-white uppercase tracking-widest cursor-pointer">
-          ReSync
-        </button>
+      <div class="flex items-center gap-4">
+        <span class="text-[9px] text-blue-500 font-mono">OPERATOR: {{ username }}</span>
+          <button @click="fetchClusterData" class="bg-slate-800/40 hover:bg-blue-600 border border-slate-700 px-4 py-1.5 rounded-sm transition-all text-[9px] font-bold text-slate-400 hover:text-white uppercase tracking-widest cursor-pointer">
+            ReSync
+          </button>
       </div>
     </header>
 
