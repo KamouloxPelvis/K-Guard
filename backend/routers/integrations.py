@@ -28,53 +28,48 @@ def update_fluentbit_config(token, room_id):
     # 1. Fetch current ConfigMap
     cm = v1.read_namespaced_config_map("fluent-bit-config", "k-guard")
     
-    # 2. Update placeholders in .conf
-    cm.data["fluent-bit.conf"] = re.sub(
-        r"Authorization Bearer [^\n]+", 
-        f"Authorization Bearer {token}", 
-        cm.data["fluent-bit.conf"]
+    # 2. Update Token
+    # Replaces 'Bearer BOT_TOKEN' with 'Bearer {token}'
+    cm.data["fluent-bit.conf"] = cm.data["fluent-bit.conf"].replace("BOT_TOKEN", token)
+    
+    # 3. Update Room ID in Lua
+    # Corrected regex to match the room_id line and replace the value
+    cm.data["filter.lua"] = re.sub(
+        r'local room_id = "[^"]+"',
+        f'local room_id = "{room_id}"',
+        cm.data["filter.lua"]
     )
-    
-    # 3. Update placeholders in filter.lua
-    cm.data["filter.lua"] = cm.data["filter.lua"].replace("ROOM_ID", room_id)
-    
-    from kubernetes.client import V1ConfigMap
 
-    # Prepare the patch object to update the Fluent Bit ConfigMap.
-    # Using V1ConfigMap ensures we adhere to the Kubernetes API schema requirements.
+    # 4. Patch the ConfigMap
+    from kubernetes.client import V1ConfigMap
     patch_body = V1ConfigMap(
         api_version="v1",
         kind="ConfigMap",
         metadata={"name": "fluent-bit-config"},
-        data=cm.data  # Apply the updated configuration dictionary
+        data=cm.data
     )
-
-    # Perform a strategic merge patch on the existing ConfigMap.
-    # patch_namespaced_config_map is preferred over replace to avoid 
-    # resource version conflicts and to ensure atomic updates.
     v1.patch_namespaced_config_map(
         name="fluent-bit-config", 
         namespace="k-guard", 
         body=patch_body
     )
 
-    # 5. Force hot-reload via deployment restart
-    patch = {"spec": {"template": {"metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": datetime.utcnow().isoformat()}}}}}
+    # 5. Force hot-reload via DaemonSet restart
     apps_v1.patch_namespaced_daemon_set(
-    name="fluent-bit", 
-    namespace="k-guard", 
-    body={
-        "spec": {
-            "template": {
-                "metadata": {
-                    "annotations": {
-                        "kubectl.kubernetes.io/restartedAt": datetime.utcnow().isoformat()
+        name="fluent-bit", 
+        namespace="k-guard", 
+        body={
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": datetime.utcnow().isoformat()
+                        }
                     }
                 }
             }
         }
-    }
-)
+    )
 
 @router.get("/settings/integrations/webex")
 async def get_webex_status():
