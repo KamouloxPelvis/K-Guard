@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import os
+import re
 import backend.database
+from kubernetes import client, config
+from datetime import datetime
 
 router = APIRouter(tags=["Integrations"])
 
@@ -10,18 +13,44 @@ class WebexConfig(BaseModel):
     token: str
     room_id: str
 
+def update_fluentbit_config(token, room_id):
+    """
+    Updates the Kubernetes ConfigMap for Fluent Bit and triggers a rollout restart.
+    """
+    try:
+        config.load_incluster_config()
+    except:
+        config.load_kube_config()
+
+    v1 = client.CoreV1Api()
+    apps_v1 = client.AppsV1Api()
+    
+    # 1. Fetch current ConfigMap
+    cm = v1.read_namespaced_config_map("fluent-bit-config", "k-guard")
+    
+    # 2. Update placeholders in .conf
+    cm.data["fluent-bit.conf"] = re.sub(
+        r"Authorization Bearer [^\n]+", 
+        f"Authorization Bearer {token}", 
+        cm.data["fluent-bit.conf"]
+    )
+    
+    # 3. Update placeholders in filter.lua
+    cm.data["filter.lua"] = cm.data["filter.lua"].replace("ROOM_ID", room_id)
+    
+    # 4. Apply update
+    v1.replace_namespaced_config_map("fluent-bit-config", "k-guard", cm)
+
+    # 5. Force hot-reload via deployment restart
+    patch = {"spec": {"template": {"metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": datetime.utcnow().isoformat()}}}}}
+    apps_v1.patch_namespaced_deployment("fluent-bit", "k-guard", patch)
+
 @router.get("/settings/integrations/webex")
 async def get_webex_status():
-    """
-    Retrieves current configuration for Frontend display.
-    """
     try:
         settings = backend.database.get_integration_settings("webex")
         if not settings:
             return {"enabled": False, "configured": False}
-        
-        # Security best practice (DevSecOps): Never return the full token to the frontend.
-        # We return a boolean status and a masked preview for user verification.
         return {
             "enabled": bool(settings['enabled']),
             "configured": bool(settings['token']),
@@ -33,9 +62,6 @@ async def get_webex_status():
 
 @router.post("/settings/integrations/webex")
 async def update_webex(config: WebexConfig):
-    """
-    Configures Cisco Webex integration and performs a hot-reload of environment variables.
-    """
     try:
         # 1. Update SQLite database
         conn = backend.database.sqlite3.connect(backend.database.DB_PATH)
@@ -48,11 +74,9 @@ async def update_webex(config: WebexConfig):
         conn.commit()
         conn.close()
 
-        # 2. Update global state for CiscoWebexNotifier (Runtime synchronization)
-        os.environ["WEBEX_ENABLED"] = str(config.enabled).lower()
-        os.environ["WEBEX_BOT_TOKEN"] = config.token
-        os.environ["WEBEX_ROOM_ID"] = config.room_id
+        # 2. Synchronize with Kubernetes
+        update_fluentbit_config(config.token, config.room_id)
 
-        return {"status": "success", "message": "Cisco Webex integration synced"}
+        return {"status": "success", "message": "Cisco Webex integration synced and pod restarted"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")

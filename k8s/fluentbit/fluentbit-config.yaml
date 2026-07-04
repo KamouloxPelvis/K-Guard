@@ -11,32 +11,81 @@ data:
         Parsers_File  parsers.conf
 
     [INPUT]
-        Name          tail
-        Path          /var/log/falco/alerts.json
-        Parser        falco_json
-        Tag           falco.logs
-        DB            /var/log/flb_falco.db
-        Mem_Buf_Limit 5MB
-        Skip_Long_Lines On
-        Refresh_Interval 5
+        Name              tail
+        Path              /var/log/falco/alerts.json
+        Parser            falco_json
+        Tag               falco.logs
+        DB                /var/log/flb_falco.db
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  5
         Read_from_Head    On
-        Ignore_Older      0
+
+    [FILTER]
+        Name              rewrite_tag
+        Match             falco.logs
+        Rule              $priority ^(Warning|Error|Notice)$ falco.webex true
+
+    [FILTER]
+        # Use the Lua plugin to apply custom formatting logic
+        Name         lua
+        Match        falco.webex
+        # Path to the script file
+        script       filter.lua
+        # Function name defined within the script
+        call         webex_formatter
+
+    [OUTPUT] # 1. ELK
+        Name               es
+        Match              falco.*
+        Host               elasticsearch-es-http.k-guard
+        Port               9200
+        Index              falco-alerts
+        HTTP_User          elastic
+        HTTP_Passwd        Li77c5dL9e8X2lio4AW8UD76
+        tls                On
+        tls.verify         Off
+        Suppress_Type_Name On
 
     [OUTPUT]
-        Name          es
-        Match         falco.*
-        Host          elasticsearch-es-http.k-guard
-        Port          9200
-        Index         falco-alerts
-        HTTP_User     elastic
-        HTTP_Passwd   Li77c5dL9e8X2lio4AW8UD76
-        tls           On
-        tls.verify    Off
-        Suppress_Type_Name On
+        Name               stdout
+        Match              falco.webex
+
+    [OUTPUT] # 2. Webex Webhook API
+        Name               http
+        Match              falco.webex
+        Host               webexapis.com
+        Port               443
+        URI                /v1/messages
+        Header             Authorization Bearer BOT_TOKEN
+        Format             json_stream
+        tls                on
+        tls.verify         on
+        Json_date_format   iso8601
+        Retry_Limit        5
 
   parsers.conf: |
     [PARSER]
-        Name        falco_json
-        Format      json
-        Time_Key    time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Name               falco_json
+        Format             json
+        Time_Key           time
+        Time_Format        %Y-%m-%dT%H:%M:%S.%L
+
+  filter.lua: |
+    -- filter.lua
+    -- This function processes incoming Falco logs for Webex alerts
+    function webex_formatter(tag, timestamp, record)
+        -- Retrieve fields with fallback values
+        local p = record["priority"] or "unknown"
+        local r = record["rule"] or "unknown"
+
+        -- Define destination room ID
+        local room_id = "Y2lzY29zcGFyazovL3VybjpURUFNOmV1LWNlbnRyYWwtMV9rL1JPT00vYWE2MjM5MDAtMTczNy0xMWYxLTg4ZDItY2IyY2E0NThhOTU4"
+
+        -- Construct the clean record for the Webex API
+        local new_record = {}
+        new_record["roomId"] = room_id
+        new_record["text"] = "Falco Alert detected: priority " .. p .. " on rule " .. r
+
+        return 1, timestamp, new_record
+    end

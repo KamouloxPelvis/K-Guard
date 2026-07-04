@@ -43,6 +43,7 @@ EXPOSE 8000
 
 # 6. Service Execution
 # Drop privileges to non-root user (ID 1000 is standard for most images)
+RUN mkdir -p /app/data && chown -R 1000:1000 /app/data
 USER 1000
 
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

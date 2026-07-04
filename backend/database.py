@@ -20,23 +20,25 @@ apps_client = None
 custom_client = None
 
 def init_k8s():
-    """Initializes Kubernetes API clients (Local or In-Cluster context)."""
+    """Initializes Kubernetes API clients."""
     global v1, apps_client, custom_client
     if v1 is not None:
         return
 
     try:
-        # Attempt to load configuration (Local Kubeconfig or In-Cluster Service Account)
+        # Priority : In-Cluster 
+        config.load_incluster_config()
+    except Exception:
         try:
+            # Fallback : Local
             config.load_kube_config()
-        except Exception:
-            config.load_incluster_config()
-        
-        v1 = client.CoreV1Api()
-        apps_client = client.AppsV1Api()
-        custom_client = client.CustomObjectsApi()
-    except Exception as e: 
-        print(f"❌ Critical: Failed to load K8s config: {e}")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not initialize K8s client (running in restricted mode?): {e}")
+            return
+
+    v1 = client.CoreV1Api()
+    apps_client = client.AppsV1Api()
+    custom_client = client.CustomObjectsApi()
 
 def init_db():
     """Initializes integration and security event tables in persistent storage."""
