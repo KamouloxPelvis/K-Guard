@@ -38,8 +38,25 @@ def update_fluentbit_config(token, room_id):
     # 3. Update placeholders in filter.lua
     cm.data["filter.lua"] = cm.data["filter.lua"].replace("ROOM_ID", room_id)
     
-    # 4. Apply update
-    v1.replace_namespaced_config_map("fluent-bit-config", "k-guard", cm)
+    from kubernetes.client import V1ConfigMap
+
+    # Prepare the patch object to update the Fluent Bit ConfigMap.
+    # Using V1ConfigMap ensures we adhere to the Kubernetes API schema requirements.
+    patch_body = V1ConfigMap(
+        api_version="v1",
+        kind="ConfigMap",
+        metadata={"name": "fluent-bit-config"},
+        data=cm.data  # Apply the updated configuration dictionary
+    )
+
+    # Perform a strategic merge patch on the existing ConfigMap.
+    # patch_namespaced_config_map is preferred over replace to avoid 
+    # resource version conflicts and to ensure atomic updates.
+    v1.patch_namespaced_config_map(
+        name="fluent-bit-config", 
+        namespace="k-guard", 
+        body=patch_body
+    )
 
     # 5. Force hot-reload via deployment restart
     patch = {"spec": {"template": {"metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": datetime.utcnow().isoformat()}}}}}
