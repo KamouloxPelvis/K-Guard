@@ -60,7 +60,21 @@ def update_fluentbit_config(token, room_id):
 
     # 5. Force hot-reload via deployment restart
     patch = {"spec": {"template": {"metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": datetime.utcnow().isoformat()}}}}}
-    apps_v1.patch_namespaced_deployment("fluent-bit", "k-guard", patch)
+    apps_v1.patch_namespaced_daemon_set(
+    name="fluent-bit", 
+    namespace="k-guard", 
+    body={
+        "spec": {
+            "template": {
+                "metadata": {
+                    "annotations": {
+                        "kubectl.kubernetes.io/restartedAt": datetime.utcnow().isoformat()
+                    }
+                }
+            }
+        }
+    }
+)
 
 @router.get("/settings/integrations/webex")
 async def get_webex_status():

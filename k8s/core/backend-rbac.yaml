@@ -20,9 +20,12 @@ rules:
   resourceNames: ["fluent-bit-config"]
   verbs: ["get", "patch", "update"]
 - apiGroups: ["apps"]
-  resources: ["deployments"]
+  resources: ["daemonsets"]
   resourceNames: ["fluent-bit"]
   verbs: ["get", "patch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods"]
+  verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
