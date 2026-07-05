@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import os
 import re
 import backend.database
 from kubernetes import client, config
@@ -13,9 +12,10 @@ class WebexConfig(BaseModel):
     token: str
     room_id: str
 
-def update_fluentbit_config(token, room_id):
+def update_fluentbit_config(token: str, room_id: str):
     """
-    Updates the Kubernetes ConfigMap for Fluent Bit and triggers a rollout restart.
+    Synchronize the Fluent Bit ConfigMap with UI settings.
+    Ensures consistency by dynamically updating the Lua filter configuration.
     """
     try:
         config.load_incluster_config()
@@ -25,36 +25,26 @@ def update_fluentbit_config(token, room_id):
     v1 = client.CoreV1Api()
     apps_v1 = client.AppsV1Api()
     
-    # 1. Fetch current ConfigMap
+    # 1. Fetch the existing ConfigMap
     cm = v1.read_namespaced_config_map("fluent-bit-config", "k-guard")
     
-    # 2. Update Token
-    # Replaces 'Bearer BOT_TOKEN' with 'Bearer {token}'
-    cm.data["fluent-bit.conf"] = cm.data["fluent-bit.conf"].replace("BOT_TOKEN", token)
-    
-    # 3. Update Room ID in Lua
-    # Corrected regex to match the room_id line and replace the value
+    # 2. Update the Lua script with the new room_id
+    # Uses regex to safely replace the room ID in the Lua logic
     cm.data["filter.lua"] = re.sub(
         r'local room_id = "[^"]+"',
         f'local room_id = "{room_id}"',
         cm.data["filter.lua"]
     )
-
-    # 4. Patch the ConfigMap
-    from kubernetes.client import V1ConfigMap
-    patch_body = V1ConfigMap(
-        api_version="v1",
-        kind="ConfigMap",
-        metadata={"name": "fluent-bit-config"},
-        data=cm.data
-    )
+    
+    # 3. Patch the ConfigMap in the cluster
     v1.patch_namespaced_config_map(
         name="fluent-bit-config", 
         namespace="k-guard", 
-        body=patch_body
+        body={"data": cm.data}
     )
 
-    # 5. Force hot-reload via DaemonSet restart
+    # 4. Trigger a rolling restart of the DaemonSet to apply new configuration
+    # The annotation forces K8s to redeploy the pods with updated ConfigMap data
     apps_v1.patch_namespaced_daemon_set(
         name="fluent-bit", 
         namespace="k-guard", 
@@ -71,25 +61,10 @@ def update_fluentbit_config(token, room_id):
         }
     )
 
-@router.get("/settings/integrations/webex")
-async def get_webex_status():
-    try:
-        settings = backend.database.get_integration_settings("webex")
-        if not settings:
-            return {"enabled": False, "configured": False}
-        return {
-            "enabled": bool(settings['enabled']),
-            "configured": bool(settings['token']),
-            "room_id": settings['target_id'] or "",
-            "token_preview": f"***{settings['token'][-4:]}" if settings['token'] else ""
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/settings/integrations/webex")
 async def update_webex(config: WebexConfig):
     try:
-        # 1. Update SQLite database
+        # A. Persist settings into the SQLite database
         conn = backend.database.sqlite3.connect(backend.database.DB_PATH)
         cursor = conn.cursor()
         cursor.execute('''
@@ -100,9 +75,10 @@ async def update_webex(config: WebexConfig):
         conn.commit()
         conn.close()
 
-        # 2. Synchronize with Kubernetes
+        # B. Sync changes with the Kubernetes infrastructure
         update_fluentbit_config(config.token, config.room_id)
 
-        return {"status": "success", "message": "Cisco Webex integration synced and pod restarted"}
+        return {"status": "success", "message": "Cisco Webex integration synced and infrastructure updated"}
     except Exception as e:
+        # Log error for maintenance tracking
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")

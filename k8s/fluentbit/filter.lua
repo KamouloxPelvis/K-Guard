@@ -1,21 +1,28 @@
--- filter.lua
--- This function processes incoming Falco logs to format them for Webex alerts
--- It extracts 'priority' and 'rule' fields to build a clean, human-readable message
-
 function webex_formatter(tag, timestamp, record)
-    -- Retrieve the 'priority' and 'rule' values from the record
-    -- Fallback to 'unknown' if fields are missing to avoid nil errors
+    -- 1. Read token from the file 
+    local f = io.open("/var/run/secrets/token/token.txt", "r")
+    local token = ""
+    if f then
+        token = f:read("*a"):gsub("%s+", "")
+        f:close()
+    else
+        token = "ERROR_TOKEN_MISSING"
+    end
+
+    -- 2. Extract information from the alert 
     local p = record["priority"] or "unknown"
     local r = record["rule"] or "unknown"
-    
-    -- Define the target Webex room ID for K-Guard alerts
-    local room_id = "ROOM_ID"
-    
-    -- Construct the final record with only the fields required by the Webex API
+    local room_id = "Y2lzY29zcGFyazovL3VybjpURUFNOmV1LWNlbnRyYWwtMV9rL1JPT00vYWE2MjM5MDAtMTczNy0xMWYxLTg4ZDItY2IyY2E0NThhOTU4"
+
+    -- 3. Create formated record for Webex
+    -- Fluent Bit would send the JSON to the Webex endpoint 
     local new_record = {}
     new_record["roomId"] = room_id
-    new_record["text"] = "Falco Alert detected: priority " .. p .. " on rule " .. r
+    new_record["text"] = "Falco Alert [" .. p .. "]: " .. r
     
-    -- Return the reformatted record for the output plugin
+    -- We add the token in  metadata that Fluent Bit will use or we
+    --  manage it directly in here if use lua HTTP library 
+    new_record["auth_token"] = token
+
     return 1, timestamp, new_record
 end

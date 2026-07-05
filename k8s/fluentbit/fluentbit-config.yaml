@@ -6,9 +6,10 @@ metadata:
 data:
   fluent-bit.conf: |
     [SERVICE]
-        Flush         1
-        Log_Level     debug
-        Parsers_File  parsers.conf
+        Flush             1
+        Log_Level         debug
+        Parsers_File      parsers.conf
+        Environment_Variables On
 
     [INPUT]
         Name              tail
@@ -27,65 +28,69 @@ data:
         Rule              $priority ^(Warning|Error|Notice)$ falco.webex true
 
     [FILTER]
-        # Use the Lua plugin to apply custom formatting logic
-        Name         lua
-        Match        falco.webex
-        # Path to the script file
-        script       filter.lua
-        # Function name defined within the script
-        call         webex_formatter
+        Name              lua
+        Match             falco.webex
+        script            filter.lua
+        call              webex_formatter
 
-    [OUTPUT] # 1. ELK
-        Name               es
-        Match              falco.*
-        Host               elasticsearch-es-http.k-guard
-        Port               9200
-        Index              falco-alerts
-        HTTP_User          elastic
-        HTTP_Passwd        Li77c5dL9e8X2lio4AW8UD76
-        tls                On
-        tls.verify         Off
+    [OUTPUT]
+        Name              es
+        Match             falco.*
+        Host              elasticsearch-es-http.k-guard
+        Port              9200
+        Index             falco-alerts
+        HTTP_User         elastic
+        HTTP_Passwd       Li77c5dL9e8X2lio4AW8UD76
+        tls               On
+        tls.verify        Off
         Suppress_Type_Name On
 
     [OUTPUT]
-        Name               stdout
-        Match              falco.webex
+        Name              stdout
+        Match             falco.webex
 
-    [OUTPUT] # 2. Webex Webhook API
-        Name               http
-        Match              falco.webex
-        Host               webexapis.com
-        Port               443
-        URI                /v1/messages
-        Header             Authorization Bearer BOT_TOKEN
-        Format             json_stream
-        tls                on
-        tls.verify         on
-        Json_date_format   iso8601
-        Retry_Limit        5
+    [OUTPUT]
+        Name              http
+        Match             falco.webex
+        Host              webexapis.com
+        Port              443
+        URI               /v1/messages
+        Header            Authorization Bearer $auth_token
+        Format            json_stream
+        tls               on
+        tls.verify        on
+        Json_date_format  iso8601
+        Retry_Limit       5
 
   parsers.conf: |
     [PARSER]
-        Name               falco_json
-        Format             json
-        Time_Key           time
-        Time_Format        %Y-%m-%dT%H:%M:%S.%L
+        Name              falco_json
+        Format            json
+        Time_Key          time
+        Time_Format       %Y-%m-%dT%H:%M:%S.%L
 
   filter.lua: |
-    -- filter.lua
-    -- This function processes incoming Falco logs for Webex alerts
     function webex_formatter(tag, timestamp, record)
-        -- Retrieve fields with fallback values
+        local file_path = "/var/run/secrets/token/token.txt"
+        local f = io.open(file_path, "r")
+        local token = "DEBUG_NO_FILE"
+        if f then
+            local content = f:read("*a")
+            f:close()
+            if content and #content > 0 then
+                token = content:gsub("%s+", "")
+            else
+                token = "DEBUG_EMPTY_FILE"
+            end
+        else
+            token = "DEBUG_CANNOT_OPEN"
+        end
         local p = record["priority"] or "unknown"
         local r = record["rule"] or "unknown"
-
-        -- Define destination room ID
-        local room_id = "Y2lzY29zcGFyazovL3VybjpURUFNOmV1LWNlbnRyYWwtMV9rL1JPT00vYWE2MjM5MDAtMTczNy0xMWYxLTg4ZDItY2IyY2E0NThhOTU4"
-
-        -- Construct the clean record for the Webex API
+        local room_id = "PLACEHOLDER_ROOM_ID"
         local new_record = {}
         new_record["roomId"] = room_id
         new_record["text"] = "Falco Alert detected: priority " .. p .. " on rule " .. r
-
+        new_record["auth_token"] = token
         return 1, timestamp, new_record
     end
