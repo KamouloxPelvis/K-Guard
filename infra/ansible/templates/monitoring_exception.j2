@@ -1,0 +1,17 @@
+# --- Monitoring Exception: Allow Prometheus Scraping ---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: sentinel-allow-prometheus
+  namespace: {{ ns_item }}
+spec:
+  podSelector: {} # Appliqué à tous les pods de l'app
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: {{ app_port | default(9090) }} # Le port où tes apps exposent les métriques

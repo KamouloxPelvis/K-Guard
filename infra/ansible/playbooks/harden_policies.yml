@@ -3,43 +3,43 @@
   connection: local
   gather_facts: no
   vars:
-    # International standard comments in English
     ansible_python_interpreter: /usr/bin/python3
-    vps_ip: "{{ lookup('env', 'VPS_IP') | default('127.0.0.1', true) }}"
 
   tasks:
-    # 1. SCOPING: Discover all user namespaces (excluding system ones)
-    - name: "🔍 Discovery: List target namespaces"
-      kubernetes.core.k8s_info:
-        kind: Namespace
-        label_selectors:
-          - "kubernetes.io/metadata.name notin (kube-system, kube-public, kube-node-lease)"
-      register: ns_list
-
-    # 2. APP DISCOVERY: Find all pods and their actual container ports
-    - name: "🔍 Discovery: Extract Apps and Ports"
-      kubernetes.core.k8s_info:
-        kind: Pod
-        namespace: "{{ item.metadata.name }}"
-      loop: "{{ ns_list.resources }}"
-      register: pod_results
-
-    - name: "⚙️ Fact: Build Dynamic App Map"
-      set_fact:
-        # Extracts app label, namespace, and container port found dynamically
-        discovered_workloads: "{{ pod_results.results | map(attribute='resources') | flatten | json_query('[*].{app: metadata.labels.app, ns: metadata.namespace, port: spec.containers[0].ports[0].containerPort}') | unique }}"
-
-    # 3. BASELINE: Apply Zero Trust (Default Deny) to all discovered namespaces
-    - name: "🔒 Sentinel: Deploy Idempotent Baseline"
+    # 1. LAYER 0: Enforce Zero Trust
+    - name: "🔒 Sentinel: Deploy Deny-All"
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('template', '../templates/core_baseline.j2') }}"
       vars:
         ns_item: "{{ item.metadata.name }}"
+      loop: "{{ ns_list.resources }}"
+
+    # 2. LAYER 1: Common infra (DNS, API, Monitoring)
+    - name: "🌐 Sentinel: Deploy Infra-Allowed"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/infra_allow.j2') }}"
+      vars:
+        ns_item: "{{ item.metadata.name }}"
         monitoring_enabled: "{{ 'monitoring' in (ns_list.resources | map(attribute='metadata.name') | list) }}"
       loop: "{{ ns_list.resources }}"
 
-    # 4. UNIVERSAL BRIDGE: Link Ingress Controller to Apps automatically
+    # 3. LAYER 2: Exemption for security stack
+    - name: "🛡️ Sentinel: Exempt Security Stack"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/exempt_stack.j2') }}"
+      vars:
+        ns_item: "k-guard"
+
+    # 4. INTEGRATIONS: Webex API Egress
+    - name: "🔓 Connectivity: Webex API Egress"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/webex_egress.j2') }}"
+
+    # 5. UNIVERSAL BRIDGE: Dynamic Internal Bridge
     - name: "🔓 Connectivity: Dynamic Internal Bridge"
       kubernetes.core.k8s:
         state: present
@@ -48,13 +48,12 @@
         app_name: "sentinel-{{ item.app }}"
         namespace: "{{ item.ns }}"
         app_label: "{{ item.app }}"
-        # Use discovered port, fallback to 80 if not found
         app_port: "{{ item.port | default(80) }}"
       loop: "{{ discovered_workloads }}"
-      when: "item.app is defined and item.app != None"
-    
-    # 5. EXTERNAL SERVICES: Database Access for Blog
-    - name: "🔓 Connectivity: MongoDB Atlas Egress for Blog"
+      when: "item.app is defined"
+
+    # 6. EXTERNAL SERVICES: Database Access
+    - name: "🔓 Connectivity: MongoDB Atlas Egress"
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('template', '../templates/app_egress.j2') }}"
@@ -62,30 +61,14 @@
         app_name: "sentinel-blog-db-access"
         namespace: "blog-prod"
         app_label: "blog-devopsnotes"
-        egress_rules:
-          # CIDR 0.0.0.0/0 handles external MongoDB Atlas nodes
-          - { cidr: "0.0.0.0/0", port: 27017, protocol: "TCP" }
-      # Only apply if the blog app was found during discovery
+        egress_rules: [{ cidr: "0.0.0.0/0", port: 27017, protocol: "TCP" }]
       when: "'blog-devopsnotes' in (discovered_workloads | map(attribute='app') | list)"
 
-      # 6. AUDIT ENABLER: Deploy diagnostic exceptions
-    - name: "🔍 Sentinel: Enable Diagnostic Path"
-      kubernetes.core.k8s:
-        state: present
-        definition: "{{ lookup('template', '../templates/audit_exception.j2') }}"
-      vars:
-        ns_item: "{{ item.metadata.name }}"
-      loop: "{{ ns_list.resources }}"
-
-      # 7. INTEGRATIONS: Webex API Egress for K-Guard
-    - name: "🔓 Connectivity: Webex API Egress for K-Guard Alerts"
-      kubernetes.core.k8s:
-        state: present
-        definition: "{{ lookup('template', '../templates/app_egress.j2') }}"
-      vars:
-        app_name: "sentinel-webex-access"
-        namespace: "k-guard"
-        app_label: "k-guard-backend"
-        egress_rules:
-          - { cidr: "0.0.0.0/0", port: 443, protocol: "TCP" }
-          - { cidr: "10.43.0.1/32", port: 443, protocol: "TCP" } # K8s API Access (K3s default IP Adress)
+    # 7. AUDIT: Calculate Security Score and push to file for API
+    - name: "📊 Audit: Calculate and Save Security Score"
+      shell: |
+        TOTAL=$(kubectl get ns --no-headers | wc -l)
+        DENIED=$(kubectl get netpol -A | grep -c "sentinel-default-deny")
+        SCORE=$(( DENIED * 100 / TOTAL ))
+        echo "$SCORE" > /tmp/kguard_security_score
+      register: security_score

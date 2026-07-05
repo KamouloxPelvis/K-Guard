@@ -1,0 +1,29 @@
+# --- Infrastructure Layer: Common Services ---
+# Allows critical communication: DNS, API Server, and Monitoring
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: sentinel-infra-allow
+  namespace: {{ ns_item }}
+  labels: { managed-by: k-guard-sentinel }
+spec:
+  podSelector: {} # Applies to all pods in namespace
+  policyTypes: ["Ingress", "Egress"]
+  egress:
+    # Allow DNS
+    - to: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}}], ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+    # Allow K8s API (Essential for K-Guard status checks)
+    - to: [{ipBlock: {cidr: 0.0.0.0/0}}], ports: [{protocol: TCP, port: 6443}]
+  ingress:
+    {% if monitoring_enabled %}
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      # Allow access to common monitoring ports
+      ports:
+        - protocol: TCP
+          port: 9090 # Prometheus
+        - protocol: TCP
+          port: 8080 # Metrics/API
+    {% endif %}

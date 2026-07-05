@@ -28,16 +28,16 @@ data:
         Rule              $priority ^(Warning|Error|Notice)$ falco.webex true
 
     [FILTER]
-        Name              lua
-        Match             falco.webex
-        script            filter.lua
-        call              webex_formatter
-
-    [FILTER]
         Name              nest
         Match             falco.webex
         Operation         lift
         Nested_under      log
+
+    [FILTER]
+        Name              lua
+        Match             falco.webex
+        script            filter.lua
+        call              webex_formatter
 
     [OUTPUT]
         Name              es

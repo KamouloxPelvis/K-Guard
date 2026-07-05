@@ -1,0 +1,13 @@
+# --- Security Exemption: K-Guard Core Stack ---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: sentinel-exempt-stack
+  namespace: k-guard
+spec:
+  podSelector:
+    matchLabels:
+      kguard-managed: exempt
+  policyTypes: ["Ingress", "Egress"]
+  ingress: [] # Allows all traffic
+  egress: []  # Allows all traffic

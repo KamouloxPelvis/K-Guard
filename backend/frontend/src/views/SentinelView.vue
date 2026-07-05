@@ -23,6 +23,11 @@
     targetIp?: string;
   }
 
+  interface SentinelStatusResponse {
+    deployed: boolean;
+    securityScore: number; // Ajoute ce champ
+  }
+
   /**
    * API Response structure for the Sentinel Map.
    */
@@ -55,26 +60,20 @@
   /**
  * Fetches the current Sentinel status to update the UI buttons accordingly.
  */
-  const fetchSentinelStatus = async () => {
-  try {
-    const response = await api.get('/sentinel/status');
-    console.log("DEBUG: Réponse brute:", response);
-    isHardened.value = response.data.deployed;
-    console.log("DEBUG: isHardened mis à jour à:", isHardened.value);
-  } catch (error) {
-    console.error("DEBUG: Erreur API:", error);
-  }
-};
+  const securityScore = ref(0); // Nouvelle variable réactive
 
-  /**
-   * Computes the global security score based on hardened vs vulnerable pods.
-   */
-  const securityStats = computed(() => {
-    if (pods.value.length === 0) return { score: 100, vulnerableCount: 0 };
-    const vulnerable = pods.value.filter(p => isVulnerable(p)).length;
-    const score = Math.round(((pods.value.length - vulnerable) / pods.value.length) * 100);
-    return { score, vulnerableCount: vulnerable };
-  });
+  const fetchSentinelStatus = async () => {
+
+    
+
+    try {
+      const response = await api.get<SentinelStatusResponse>('/sentinel/status');
+      isHardened.value = response.data.deployed;
+      securityScore.value = response.data.securityScore;
+    } catch (error) {
+      console.error("Erreur API:", error);
+    }
+  };
 
   /**
    * Filters and sorts pods based on the selected namespace.
@@ -208,14 +207,26 @@
 
   // --- SENTINEL ACTIONS ---
 
+  const isDeploying = ref(false); // Ajoute cet état
+
   const triggerHarden = async () => {
-
-  if (!confirm("🚨 Apply Network Sentinel hardening?")) return;
-
-  await api.post('/sentinel/activate', {});
-  await fetchSentinelStatus(); // Refresh status after action
-  fetchNetworkData();
-};
+    if (!confirm("🚨 Apply Network Sentinel hardening?")) return;
+    
+    isDeploying.value = true;
+    try {
+      await api.post('/sentinel/activate', {});
+      
+      // Attente artificielle de 2s pour laisser le temps à Ansible d'initialiser les NetworkPolicies
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      await fetchSentinelStatus();
+      await fetchNetworkData();
+    } catch (err) {
+      console.error("Échec du déploiement :", err);
+    } finally {
+      isDeploying.value = false;
+    }
+  };
 
   const triggerDeactivate = async () => {
 
@@ -242,7 +253,6 @@
 
   onMounted(async () => {
   console.log("DEBUG: SentinelView MONTE");
-  
   await nextTick(); 
   init(); 
 });
@@ -304,9 +314,12 @@
           <div class="relative flex items-center justify-center">
             <svg class="w-16 h-16 transform -rotate-90">
               <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3" fill="transparent" class="text-slate-800" />
-              <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3" fill="transparent" :stroke-dasharray="175" :stroke-dashoffset="175 - (175 * securityStats.score) / 100" :class="securityStats.score < 50 ? 'text-red-500' : 'text-blue-500'" />
+              <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3" fill="transparent" 
+                      :stroke-dasharray="175" 
+                      :stroke-dashoffset="175 - (175 * securityScore) / 100" 
+                      :class="securityScore < 50 ? 'text-red-500' : 'text-blue-500'" />
             </svg>
-            <span class="absolute text-md font-black text-white">{{ securityStats.score }}%</span>
+            <span class="absolute text-md font-black text-white">{{ securityScore }}%</span>
           </div>
         </div>
       </div>

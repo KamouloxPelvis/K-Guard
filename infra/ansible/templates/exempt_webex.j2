@@ -1,0 +1,17 @@
+# --- Egress Policy: Webex API for K-Guard App ---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: sentinel-webex-egress
+  namespace: k-guard
+spec:
+  podSelector:
+    matchLabels:
+      app: k-guard
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+      - ipBlock: { cidr: 0.0.0.0/0 } # Webex API endpoint
+      ports:
+        - protocol: TCP
+          port: 443
