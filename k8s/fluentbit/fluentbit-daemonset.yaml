@@ -15,20 +15,6 @@ spec:
         app: fluent-bit
     spec:
       serviceAccountName: fluent-bit
-      initContainers:
-      - name: init-token
-        image: busybox
-        # Creates the directory and saves the token to the shared volume
-        command: ['sh', '-c', 'mkdir -p /tmp/token && echo $WEBEX_TOKEN > /tmp/token/token.txt']
-        env:
-        - name: WEBEX_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: webex-secret
-              key: token
-        volumeMounts:
-        - name: token-volume
-          mountPath: /tmp/token
       containers:
       - name: fluent-bit
         image: fluent/fluent-bit:3.0.0

@@ -1,7 +1,8 @@
+import re
+import base64
+import backend.database
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import re
-import backend.database
 from kubernetes import client, config
 from datetime import datetime
 
@@ -24,15 +25,20 @@ def update_fluentbit_config(token: str, room_id: str):
 
     v1 = client.CoreV1Api()
     apps_v1 = client.AppsV1Api()
-    
-    # 1. Fetch the existing ConfigMap
+
+    # 1. Update the Secret (base64 encoding required by K8s)
+    secret_data = {"token": base64.b64encode(token.encode()).decode()}
+    v1.patch_namespaced_secret(
+        name="webex-secret",
+        namespace="k-guard",
+        body={"data": secret_data}
+    )
+
+    # 2. Update the ConfigMap (the room_id)
     cm = v1.read_namespaced_config_map("fluent-bit-config", "k-guard")
-    
-    # 2. Update the Lua script with the new room_id
-    # Uses regex to safely replace the room ID in the Lua logic
     cm.data["filter.lua"] = re.sub(
-        r'local room_id = "[^"]+"',
-        f'local room_id = "{room_id}"',
+        r'new_record\["roomId"\] = "[^"]+"',
+        f'new_record["roomId"] = "{room_id}"',
         cm.data["filter.lua"]
     )
     

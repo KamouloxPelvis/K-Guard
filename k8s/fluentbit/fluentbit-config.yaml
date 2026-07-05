@@ -55,8 +55,8 @@ data:
         Host              webexapis.com
         Port              443
         URI               /v1/messages
-        Header            Authorization Bearer $auth_token
-        Format            json_stream
+        Header            Authorization Bearer ${WEBEX_TOKEN}
+        Format            json
         tls               on
         tls.verify        on
         Json_date_format  iso8601
@@ -70,27 +70,16 @@ data:
         Time_Format       %Y-%m-%dT%H:%M:%S.%L
 
   filter.lua: |
+    -- filter.lua
     function webex_formatter(tag, timestamp, record)
-        local file_path = "/var/run/secrets/token/token.txt"
-        local f = io.open(file_path, "r")
-        local token = "DEBUG_NO_FILE"
-        if f then
-            local content = f:read("*a")
-            f:close()
-            if content and #content > 0 then
-                token = content:gsub("%s+", "")
-            else
-                token = "DEBUG_EMPTY_FILE"
-            end
-        else
-            token = "DEBUG_CANNOT_OPEN"
-        end
         local p = record["priority"] or "unknown"
         local r = record["rule"] or "unknown"
-        local room_id = "PLACEHOLDER_ROOM_ID"
+        local alert_text = record["output"] or "Alert detected"
+ 
         local new_record = {}
-        new_record["roomId"] = room_id
-        new_record["text"] = "Falco Alert detected: priority " .. p .. " on rule " .. r
-        new_record["auth_token"] = token
+        -- roomId sera injecté dynamiquement par ton Python via re.sub
+        new_record["roomId"] = "PLACEHOLDER_ROOM_ID"
+        new_record["markdown"] = "**K-Guard Alert**\n* Rule: " .. r .. "\n* Priority: " .. p .. "\n* Details: " .. alert_text
+
         return 1, timestamp, new_record
     end
