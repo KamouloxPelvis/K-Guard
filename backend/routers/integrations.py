@@ -26,7 +26,7 @@ def update_fluentbit_config(token: str, room_id: str):
     v1 = client.CoreV1Api()
     apps_v1 = client.AppsV1Api()
 
-    # 1. Update the Secret (base64 encoding required by K8s)
+    # 1. Mise à jour du Secret
     secret_data = {"token": base64.b64encode(token.encode()).decode()}
     v1.patch_namespaced_secret(
         name="webex-secret",
@@ -34,23 +34,20 @@ def update_fluentbit_config(token: str, room_id: str):
         body={"data": secret_data}
     )
 
-    # 2. Update the ConfigMap (the room_id)
+    # 2. Mise à jour du ConfigMap (Lua filter)
     cm = v1.read_namespaced_config_map("fluent-bit-config", "k-guard")
     cm.data["filter.lua"] = re.sub(
         r'new_record\["roomId"\] = "[^"]+"',
         f'new_record["roomId"] = "{room_id}"',
         cm.data["filter.lua"]
     )
-    
-    # 3. Patch the ConfigMap in the cluster
     v1.patch_namespaced_config_map(
         name="fluent-bit-config", 
         namespace="k-guard", 
         body={"data": cm.data}
     )
 
-    # 4. Trigger a rolling restart of the DaemonSet to apply new configuration
-    # The annotation forces K8s to redeploy the pods with updated ConfigMap data
+    # 3. Trigger du redémarrage du DaemonSet (c'est le point 4 dans ton code)
     apps_v1.patch_namespaced_daemon_set(
         name="fluent-bit", 
         namespace="k-guard", 

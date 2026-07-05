@@ -33,6 +33,12 @@ data:
         script            filter.lua
         call              webex_formatter
 
+    [FILTER]
+        Name              nest
+        Match             falco.webex
+        Operation         lift
+        Nested_under      log
+
     [OUTPUT]
         Name              es
         Match             falco.*
@@ -56,7 +62,7 @@ data:
         Port              443
         URI               /v1/messages
         Header            Authorization Bearer ${WEBEX_TOKEN}
-        Format            json
+        Format            json_stream
         tls               on
         tls.verify        on
         Json_date_format  iso8601
@@ -75,7 +81,7 @@ data:
         local p = record["priority"] or "unknown"
         local r = record["rule"] or "unknown"
         local alert_text = record["output"] or "Alert detected"
- 
+
         local new_record = {}
         -- roomId sera injecté dynamiquement par ton Python via re.sub
         new_record["roomId"] = "PLACEHOLDER_ROOM_ID"
