@@ -135,16 +135,22 @@
   // --- UI Actions ---
 
   const openDetails = async (pod: PodStatus) => {
-    selectedPod.value = pod;
-    showModal.value = true;
-    podLogs.value = ">> ESTABLISHING SECURE CONNECTION...";
-    try {
-      const { data } = await api.get<LogResponse>(`/k3s/logs/${pod.namespace}/${pod.pod_name}`);
-      podLogs.value = data.logs || "No logs available.";
-    } catch (error) { 
-      podLogs.value = "CONNECTION REFUSED BY API."; 
-    }
-  };
+  selectedPod.value = pod;
+  showModal.value = true;
+  podLogs.value = ">> ESTABLISHING SECURE CONNECTION...";
+  try {
+    const { data } = await api.get<LogResponse>(`/k3s/logs/${pod.namespace}/${pod.pod_name}`);
+    
+    // Fix: replace literal '\n' sequences with real line breaks
+    // Also ensuring clean text representation
+    podLogs.value = data.logs 
+      ? data.logs.replace(/\\n/g, '\n').replace(/\\r/g, '') 
+      : "No logs available.";
+      
+  } catch (error) { 
+    podLogs.value = "CONNECTION REFUSED BY API."; 
+  }
+};
 
   const restartPod = async (event: Event, pod: PodStatus) => {
     event.stopPropagation(); 
@@ -269,28 +275,28 @@
     </div>
 
     <Teleport to="body">
-  <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
-    <div class="bg-[#0d0e12] border border-slate-800 w-full max-w-5xl h-[85vh] flex flex-col rounded-sm shadow-2xl">
-      
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-[#111217]">
-        <span class="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em]">
-          Secure Log Stream // {{ selectedPod?.pod_name }}
-        </span>
-        <button @click="showModal = false" class="text-slate-500 hover:text-white text-lg transition-colors">&times;</button>
-      </div>
+      <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+        <div class="bg-[#0d0e12] border border-slate-800 w-full max-w-5xl h-[85vh] flex flex-col rounded-sm shadow-2xl">
+          
+          <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-[#111217]">
+            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em]">
+              Secure Log Stream // {{ selectedPod?.pod_name }}
+            </span>
+            <button @click="showModal = false" class="text-slate-500 hover:text-white text-lg transition-colors">&times;</button>
+          </div>
 
-      <div class="flex-1 p-6 overflow-y-auto bg-[#0a0a0c]">
-        <pre class="whitespace-pre-wrap break-words text-xs md:text-sm font-mono text-emerald-500 leading-relaxed">
-          {{ podLogs }}
-        </pre>
-      </div>
+          <div class="flex-1 p-6 overflow-y-auto bg-[#0a0a0c]">
+            <pre class="whitespace-pre-wrap break-words text-xs md:text-sm font-mono text-slate-300 leading-relaxed">
+              {{ podLogs }}
+            </pre>
+          </div>
 
-      <div class="p-3 border-t border-slate-900 bg-[#0d0e12] flex justify-between items-center">
-        <span class="text-[9px] text-slate-600 uppercase font-bold tracking-widest">K-Guard Engine // Terminal V2</span>
-        <span class="text-[9px] text-blue-900 font-mono italic">Ready</span>
+          <div class="p-3 border-t border-slate-900 bg-[#0d0e12] flex justify-between items-center">
+            <span class="text-[9px] text-slate-600 uppercase font-bold tracking-widest">K-Guard Engine // Terminal V2</span>
+            <span class="text-[9px] text-blue-900 font-mono italic">Ready</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</Teleport>
+    </Teleport>
   </div>
 </template>
