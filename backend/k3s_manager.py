@@ -88,7 +88,8 @@ def get_pod_logs(namespace: str, pod_name: str):
         
         # Handle bytes vs string format securely
         if isinstance(log_data, bytes):
-            return log_data.decode('utf-8', errors='replace')
+            decoded_logs = log_data.decode('utf-8', errors='replace')
+            return decoded_logs
         return str(log_data)
 
     except Exception as e:

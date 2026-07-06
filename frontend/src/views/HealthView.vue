@@ -133,24 +133,24 @@
   };
 
   // --- UI Actions ---
-
   const openDetails = async (pod: PodStatus) => {
-  selectedPod.value = pod;
-  showModal.value = true;
-  podLogs.value = ">> ESTABLISHING SECURE CONNECTION...";
-  try {
-    const { data } = await api.get<LogResponse>(`/k3s/logs/${pod.namespace}/${pod.pod_name}`);
-    
-    // Fix: replace literal '\n' sequences with real line breaks
-    // Also ensuring clean text representation
-    podLogs.value = data.logs 
-      ? data.logs.replace(/\\n/g, '\n').replace(/\\r/g, '') 
-      : "No logs available.";
+    selectedPod.value = pod;
+    showModal.value = true;
+    podLogs.value = ">> ESTABLISHING SECURE CONNECTION...";
+    try {
+      const { data } = await api.get<LogResponse>(`/k3s/logs/${pod.namespace}/${pod.pod_name}`);
       
-  } catch (error) { 
-    podLogs.value = "CONNECTION REFUSED BY API."; 
-  }
-};
+      let raw = data.logs;
+      if (raw.startsWith("b'") && raw.endsWith("'")) {
+          raw = raw.slice(2, -1);
+      }
+
+      podLogs.value = raw.replace(/\\n/g, '\n').replace(/\\r/g, '');
+        
+    } catch (error) { 
+      podLogs.value = "CONNECTION REFUSED BY API."; 
+    }
+  };
 
   const restartPod = async (event: Event, pod: PodStatus) => {
     event.stopPropagation(); 
