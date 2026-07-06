@@ -60,9 +60,6 @@ def get_k3s_status():
         return []
 
 def get_pod_logs(namespace: str, pod_name: str):
-    """
-    SRE Feature: Retrieves the last 50 lines of logs for a specific pod.
-    """
     if not v1:
         return "⚠️ K8s Client not initialized."
     try:
@@ -78,12 +75,14 @@ def get_pod_logs(namespace: str, pod_name: str):
             container=primary_container, 
             tail_lines=50
         )
-        
         return logs_bytes.decode('utf-8', errors='replace')
 
     except Exception as e:
-        print(f"❌ Log Retrieval Error: {str(e)}")
-        return f"CRITICAL ERROR: Unable to retrieve logs."
+        # --- MODIFICATION : Affiche l'erreur complète pour débugger ---
+        print(f"❌ LOG DEBUG - Exception type: {type(e).__name__}")
+        print(f"❌ LOG DEBUG - Message: {str(e)}")
+        # -------------------------------------------------------------
+        return f"CRITICAL ERROR: {str(e)}" # Retourne l'erreur réelle au frontend
 
 def get_cluster_deployments():
     """Retrieves deployments for security auditing."""
