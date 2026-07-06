@@ -62,30 +62,28 @@ def get_k3s_status():
 def get_pod_logs(namespace: str, pod_name: str):
     """
     SRE Feature: Retrieves the last 50 lines of logs for a specific pod.
-    Dynamically identifies the primary container to support multi-container pods (Sidecars).
     """
     if not v1:
         return "⚠️ K8s Client not initialized."
     try:
-        # 1. Fetch the pod metadata to inspect containers
         pod = v1.read_namespaced_pod(name=pod_name, namespace=namespace)
         if not pod.spec.containers:
-            return "CRITICAL ERROR: No containers found in the targeted pod."
+            return "CRITICAL ERROR: No containers found."
         
-        # 2. Extract the name of the first (primary) container
         primary_container = pod.spec.containers[0].name
         
-        # 3. Explicitly request logs for the primary container
-        logs = v1.read_namespaced_pod_log(
+        logs_bytes = v1.read_namespaced_pod_log(
             name=pod_name, 
             namespace=namespace, 
             container=primary_container, 
             tail_lines=50
         )
-        return logs
+        
+        return logs_bytes.decode('utf-8', errors='replace')
+
     except Exception as e:
         print(f"❌ Log Retrieval Error: {str(e)}")
-        return f"CRITICAL ERROR: Unable to retrieve logs for {pod_name}. See K-Guard backend logs."
+        return f"CRITICAL ERROR: Unable to retrieve logs."
 
 def get_cluster_deployments():
     """Retrieves deployments for security auditing."""
