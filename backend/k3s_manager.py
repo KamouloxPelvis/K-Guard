@@ -1,6 +1,7 @@
 from backend.database import v1, apps_client
-import shutil
 import os
+import shutil
+import logging
 
 # Namespaces to exclude from security monitoring and dashboard
 SYSTEM_NS = ["kube-system", "kube-public", "kube-node-lease", "local-path-storage", "cert-manager", "ingress-nginx"]
@@ -59,7 +60,15 @@ def get_k3s_status():
         print(f"❌ Health Status Error: {e}")
         return []
 
+import logging
+
+# Configure a logger for the K-Guard backend
+logger = logging.getLogger("k-guard-backend")
+
 def get_pod_logs(namespace: str, pod_name: str):
+    """
+    SRE Feature: Retrieves the last 50 lines of logs for a specific pod.
+    """
     if not v1:
         return "⚠️ K8s Client not initialized."
     try:
@@ -69,21 +78,24 @@ def get_pod_logs(namespace: str, pod_name: str):
         
         primary_container = pod.spec.containers[0].name
         
-        logs_bytes = v1.read_namespaced_pod_log(
+        # Request logs from the Kubernetes API
+        log_data = v1.read_namespaced_pod_log(
             name=pod_name, 
             namespace=namespace, 
             container=primary_container, 
             tail_lines=50
         )
-        return logs_bytes.decode('utf-8', errors='replace')
+        
+        # Handle bytes vs string format securely
+        if isinstance(log_data, bytes):
+            return log_data.decode('utf-8', errors='replace')
+        return str(log_data)
 
     except Exception as e:
-        # --- MODIFICATION : Affiche l'erreur complète pour débugger ---
-        print(f"❌ LOG DEBUG - Exception type: {type(e).__name__}")
-        print(f"❌ LOG DEBUG - Message: {str(e)}")
-        # -------------------------------------------------------------
-        return f"CRITICAL ERROR: {str(e)}" # Retourne l'erreur réelle au frontend
-
+        # Structured logging for SRE auditability
+        logger.error(f"Log retrieval failed for pod {pod_name} in namespace {namespace}: {str(e)}")
+        return f"CRITICAL ERROR: Unable to retrieve logs for {pod_name}."
+    
 def get_cluster_deployments():
     """Retrieves deployments for security auditing."""
     if not apps_client:
