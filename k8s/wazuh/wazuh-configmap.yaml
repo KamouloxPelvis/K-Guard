@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-manager-config
+  namespace: k-guard
+data:
+  ossec.conf: |
+    <ossec_config>
+      <global>
+        <jsonout_output>yes</jsonout_output>
+        <alerts_log>yes</alerts_log>
+        <logall>no</logall>
+      </global>
+
+      <remote>
+        <connection>syslog</connection>
+        <port>1514</port>
+        <protocol>tcp</protocol>
+        <allowed-ips>0.0.0.0/0</allowed-ips>
+      </remote>
+
+      <syscheck>
+        <disabled>no</disabled>
+        <directories check_all="yes">/etc,/usr/bin,/usr/sbin</directories>
+      </syscheck>
+
+      <rootcheck>
+        <disabled>no</disabled>
+      </rootcheck>
+    </ossec_config>

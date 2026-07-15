@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wazuh-agent
+  namespace: k-guard
+spec:
+  selector:
+    matchLabels:
+      app: wazuh-agent
+  template:
+    metadata:
+      labels:
+        app: wazuh-agent
+    spec:
+      containers:
+      - name: wazuh-agent
+        image: wazuh/wazuh-agent:4.14.6
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "001 wazuh-agent-4btcc 10.42.0.198 f263829d83440e2e9797dcd612bcf37390f2339b7324147281f0601dad873625" > /var/ossec/etc/client.keys
+
+            chown wazuh:wazuh /var/ossec/etc/client.keys
+            chmod 640 /var/ossec/etc/client.keys
+
+            # Copie de la config
+            mkdir -p /var/ossec/etc
+            cp /tmp/config/ossec.conf /var/ossec/etc/ossec.conf
+            # Lancement direct
+            /var/ossec/bin/wazuh-agentd -f
+        env:
+        - name: WAZUH_MANAGER
+          value: "wazuh-manager-service"
+        - name: WAZUH_MANAGER_PORT
+          value: "1514"
+        - name: WAZUH_AGENT_GROUP
+          value: ""
+        - name: WAZUH_AGENT_IP
+          value: "any"
+        - name: WAZUH_AUTO_ENROLLMENT
+          value: "true"
+        - name: WAZUH_REGISTER_AGENT
+          value: "true"
+        - name: WAZUH_MANAGER_AUTO_RECOVERY
+          value: "true"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/log
+          name: var-log-dir
+        - mountPath: /var/run/docker.sock
+          name: var-run-docker-sock
+        - mountPath: /tmp/config
+          name: config-volume
+          readOnly: true
+        - name: falco-logs
+          mountPath: /var/log/falco
+          readOnly: true
+      volumes:
+      - hostPath:
+          path: /var/log
+        name: var-log-dir
+      - hostPath:
+          path: /var/run/docker.sock
+        name: var-run-docker-sock
+      - configMap:
+          name: wazuh-agent-config
+        name: config-volume
+      - name: falco-logs
+        hostPath:
+          path: /var/log/falco

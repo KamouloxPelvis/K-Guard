@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-agent-config
+  namespace: k-guard
+data:
+  ossec.conf: |
+    <ossec_config>
+      <client>
+        <server>
+          <address>wazuh-manager-service</address>
+          <port>1514</port>
+          <protocol>tcp</protocol>
+        </server>
+        <crypto_method>aes</crypto_method>
+      </client>
+
+      <localfile>
+        <log_format>json</log_format>
+        <location>/var/log/falco/alerts.json</location>
+      </localfile>
+
+      <syscheck>
+        <disabled>yes</disabled>
+      </syscheck>
+      <rootcheck>
+        <disabled>yes</disabled>
+      </rootcheck>
+    </ossec_config>

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-manager
+  namespace: k-guard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wazuh-manager
+  template:
+    metadata:
+      labels:
+        app: wazuh-manager
+    spec:
+      containers:
+      - name: wazuh-manager
+        image: wazuh/wazuh-manager:4.14.6
+        securityContext:
+          privileged: true
+          capabilities:
+            add: ["NET_BIND_SERVICE"]
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            sleep 10
+            cp /var/ossec/etc/custom/ossec.conf /var/ossec/etc/ossec.conf
+            /init
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://wazuh-indexer.k-guard.svc.cluster.local:9200"
+        - name: FILEBEAT_ENABLED
+          value: "yes"
+        - name: API_USER
+          value: "admin"
+        - name: API_PASS
+          value: "KGuard2026!"
+        volumeMounts:
+        - name: wazuh-data
+          mountPath: /var/ossec/data
+        - name: wazuh-logs
+          mountPath: /var/ossec/logs
+        - name: config-volume
+          mountPath: /var/ossec/etc/custom/
+        - name: filebeat-config
+          mountPath: /etc/filebeat/filebeat.yml
+          subPath: filebeat.yml
+      volumes:
+      - name: wazuh-data
+        persistentVolumeClaim:
+          claimName: wazuh-data-pvc
+      - name: wazuh-logs
+        persistentVolumeClaim:
+          claimName: wazuh-logs-pvc
+      - name: config-volume
+        configMap:
+          name: wazuh-manager-config
+      - name: filebeat-config
+        configMap:
+          name: wazuh-filebeat-config-override

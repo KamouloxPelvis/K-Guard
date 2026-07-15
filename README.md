@@ -139,6 +139,27 @@ kubectl get secret elasticsearch-es-elastic-user -n k-guard -o go-template='{{.d
 ```
 * Store this password securely. For security best practices, do not commit it to any repository. 
 
+### Wazuh
+
+To ensure security, this project does not store sensitive credentials for Wazuh.
+
+After deploying the infrastructure, you must set your admin password.
+
+Use the provided deployment script:
+
+```bash
+
+cd /k8s/wazuh
+
+./deploy-secrets.sh <your_chosen_password>
+```
+
+You can then log in to the dashboard at http://<your-ip>:5601 with:
+
+Username: admin
+
+Password: The password you provided to the script.
+
 ---
 
 ## 🛰️ <a name="en-cisco-webex-integration"></a>Cisco Webex Integration

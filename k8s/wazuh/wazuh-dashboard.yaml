@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-dashboard
+  namespace: k-guard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wazuh-dashboard
+  template:
+    metadata:
+      labels:
+        app: wazuh-dashboard
+    spec:
+      containers:
+      - name: wazuh-dashboard
+        image: wazuh/wazuh-dashboard:4.14.6
+        ports:
+        - containerPort: 5601
+        env:
+        # C'est la seule variable cruciale pour le plugin Wazuh
+        - name: WAZUH_API_URL
+          value: "http://wazuh-manager-service:55000"
+        - name: LOGGING_LEVEL
+          value: "debug"
+        - name: WAZUH_API_USER
+          value: "admin"
+        - name: WAZUH_API_PASS
+          value: "KGuard2026!"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+          subPath: opensearch_dashboards.yml
+      volumes:
+      - name: config-volume
+        configMap:
+          name: wazuh-dashboard-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-dashboard
+  namespace: k-guard
+spec:
+  type: NodePort
+  selector:
+    app: wazuh-dashboard
+  ports:
+    - protocol: TCP
+      port: 5601
+      targetPort: 5601
+      nodePort: 31001

@@ -16,8 +16,9 @@ updates:
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "daily"
+      interval: "weekly" # Plus de temps pour tester
     open-pull-requests-limit: 5
+    versioning-strategy: "lockfile-only"
     labels:
       - "security"
       - "frontend"

@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wazuh-indexer-init
+  namespace: k-guard
+spec:
+  template:
+    spec:
+      containers:
+      - name: init-security
+        image: wazuh/wazuh-indexer:4.14.6
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
+            -cd /usr/share/wazuh-indexer/plugins/opensearch-security/securityconfig/ \
+            -icl -nhnv \
+            -cacert /etc/wazuh-indexer/certs/root-ca.pem \
+            -cert /etc/wazuh-indexer/certs/admin.pem \
+            -key /etc/wazuh-indexer/certs/admin-key.pem
+      restartPolicy: OnFailure

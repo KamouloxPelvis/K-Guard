@@ -1,10 +1,10 @@
 # --- STAGE 1: Frontend Build Process ---
 FROM node:22-bullseye AS build-frontend
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
 COPY frontend/ ./
-RUN npm run build
+RUN npm run build || (rm -rf node_modules && npm ci && npm run build)
 
 # --- STAGE 2: Backend Runtime ---
 # Using a slim Python image to minimize the attack surface

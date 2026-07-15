@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-filebeat-config-override
+  namespace: k-guard
+data:
+  filebeat.yml: |
+    filebeat.modules:
+      - module: wazuh
+        alerts: {enabled: true}
+        archives: {enabled: false}
+    output.elasticsearch:
+      hosts: ["http://wazuh-indexer.k-guard.svc.cluster.local:9200"]
+      protocol: "http"
+    logging.metrics.enabled: false
+    seccomp:
+      default_action: allow

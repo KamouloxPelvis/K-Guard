@@ -33,13 +33,13 @@ data:
         Operation         lift
         Nested_under      log
 
-    [FILTER]
+    [FILTER] # Script Lua
         Name              lua
         Match             falco.webex
         script            filter.lua
         call              webex_formatter
 
-    [OUTPUT]
+    [OUTPUT] # ElasticSearch
         Name              es
         Match             falco.*
         Host              elasticsearch-es-http.k-guard
@@ -51,11 +51,11 @@ data:
         tls.verify        Off
         Suppress_Type_Name On
 
-    [OUTPUT]
+    [OUTPUT] # Webex stdout
         Name              stdout
         Match             falco.webex
 
-    [OUTPUT]
+    [OUTPUT] # Webex HTTP
         Name              http
         Match             falco.webex
         Host              webexapis.com
@@ -67,6 +67,12 @@ data:
         tls.verify        on
         Json_date_format  iso8601
         Retry_Limit       5
+
+    [OUTPUT] # Wazuh
+        Name              forward
+        Match             falco.*
+        Host              wazuh-manager-service.wazuh.svc.cluster.local
+        Port              1514
 
   parsers.conf: |
     [PARSER]

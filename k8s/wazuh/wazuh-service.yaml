@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-manager-service
+  namespace: k-guard
+spec:
+  selector:
+    app: wazuh-manager
+  ports:
+    - name: agent-connection
+      port: 1514
+      targetPort: 1514
+      protocol: TCP
+    - name: enrollment
+      port: 1515
+      targetPort: 1515
+      protocol: TCP
+    - name: api
+      port: 55000
+      targetPort: 55000
+      protocol: TCP
+  type: ClusterIP

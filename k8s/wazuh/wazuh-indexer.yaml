@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wazuh-indexer
+  namespace: k-guard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wazuh-indexer
+  template:
+    metadata:
+      labels:
+        app: wazuh-indexer
+    spec:
+      containers:
+      - name: wazuh-indexer
+        image: wazuh/wazuh-indexer:4.14.6
+        ports:
+        - containerPort: 9200
+        env:
+        - name: discovery.type
+          value: "single-node"
+        - name: DISABLE_SECURITY_PLUGIN
+          value: "true"
+        - name: network.host
+          value: "0.0.0.0"
+        - name: node.name
+          value: "wazuh-indexer"
+        - name: cluster.name
+          value: "wazuh-cluster"
+        - name: OPENSEARCH_JAVA_OPTS
+          value: "-Xms512m -Xmx512m"
+        - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+          value: "KGuard2026!"
+        volumeMounts:
+        - name: wazuh-data
+          mountPath: /usr/share/opensearch/data
+      volumes:
+      - name: wazuh-data
+        persistentVolumeClaim:
+          claimName: wazuh-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-indexer
+  namespace: k-guard
+spec:
+  selector:
+    app: wazuh-indexer
+  ports:
+    - port: 9200
+      targetPort: 9200
