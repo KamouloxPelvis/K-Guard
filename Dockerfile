@@ -1,49 +1,47 @@
 # --- STAGE 1: Frontend Build Process ---
 FROM node:22-bullseye AS build-frontend
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+
+COPY frontend/package.json ./
+COPY frontend/package-lock.json ./
+
+RUN npm install --legacy-peer-deps
+
 COPY frontend/ ./
-RUN npm run build || (rm -rf node_modules && npm ci && npm run build)
+
+RUN npm run build
 
 # --- STAGE 2: Backend Runtime ---
-# Using a slim Python image to minimize the attack surface
 FROM python:3.11-slim-bookworm 
 WORKDIR /app
 
-# 1. System Dependencies
-# Minimalist approach: keep only what's necessary for runtime
+# Installation des dépendances système
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Dependency Management
+# Installation des dépendances Python
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 3. Source Code Placement
+# Copie du code backend et configuration
 COPY backend/ ./backend/
 COPY tests/ ./tests/
 COPY infra/ ./infra/
 
-# 4. Frontend Integration
+# Copie du build frontend depuis la STAGE 1
 COPY --from=build-frontend /app/frontend/dist /app/static
 
-# 5. Runtime Configuration
-WORKDIR /app/backend
-
-# SRE Fix: Add the root directory to PYTHONPATH
+# Configuration SRE
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-EXPOSE 8000
-
-# 6. Service Execution
-# Drop privileges to non-root user (ID 1000 is standard for most images)
-RUN mkdir -p /app/data && chown -R 1000:1000 /app/data
+# Préparation du répertoire de données et permissions
+RUN mkdir -p /app/data && chown -R 1000:1000 /app
 USER 1000
 
+EXPOSE 8000
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

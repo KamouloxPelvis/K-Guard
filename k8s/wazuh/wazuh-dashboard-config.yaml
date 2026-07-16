@@ -8,4 +8,3 @@ data:
     server.host: "0.0.0.0"
     server.port: 5601
     opensearch.hosts: ["http://wazuh-indexer:9200"]
-    opensearch.ssl.verificationMode: none

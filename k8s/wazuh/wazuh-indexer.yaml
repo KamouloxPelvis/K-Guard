@@ -33,6 +33,10 @@ spec:
           value: "-Xms512m -Xmx512m"
         - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
           value: "KGuard2026!"
+        - name: plugins.security.ssl.http.enabled
+          value: "false"
+        - name: plugins.security.ssl.transport.enabled
+          value: "false"
         volumeMounts:
         - name: wazuh-data
           mountPath: /usr/share/opensearch/data
