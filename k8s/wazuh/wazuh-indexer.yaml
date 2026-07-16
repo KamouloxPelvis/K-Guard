@@ -16,6 +16,9 @@ spec:
       containers:
       - name: wazuh-indexer
         image: wazuh/wazuh-indexer:4.14.6
+        command: ["/bin/bash", "-c"]
+        args:
+          - rm -f /etc/wazuh-indexer/certs/*.pem && /usr/share/opensearch/opensearch-docker-entrypoint.sh
         ports:
         - containerPort: 9200
         env:
