@@ -40,10 +40,16 @@ spec:
         volumeMounts:
         - name: wazuh-data
           mountPath: /usr/share/opensearch/data
+        - name: config-volume
+          mountPath: /usr/share/opensearch/config/opensearch.yml
+          subPath: opensearch.yml
       volumes:
       - name: wazuh-data
         persistentVolumeClaim:
           claimName: wazuh-data-pvc
+      - name: config-volume
+        configMap:
+          name: wazuh-indexer-config
 ---
 apiVersion: v1
 kind: Service

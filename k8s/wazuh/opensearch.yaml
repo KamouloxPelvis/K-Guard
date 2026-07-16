@@ -1,0 +1,4 @@
+cluster.name: "wazuh-cluster"
+network.host: 0.0.0.0
+plugins.security.disabled: true
+http.ssl.enabled: false
