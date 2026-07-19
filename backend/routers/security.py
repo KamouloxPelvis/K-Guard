@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from .auth import verify_token
 import httpx
 import os
 
@@ -7,7 +8,7 @@ router = APIRouter(prefix="/security", tags=["Runtime Security"])
 ELASTICSEARCH_URL = "http://elasticsearch-master:9200"
 
 @router.get("/alerts")
-async def get_runtime_alerts():
+async def get_runtime_alerts(user: dict = Depends(verify_token)):
     """
     Fetches real-time runtime security alerts from Elasticsearch.
     Standardized access for Cisco-compliant audit reporting.

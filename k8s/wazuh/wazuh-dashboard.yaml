@@ -58,6 +58,8 @@ spec:
                 secretKeyRef:
                   name: wazuh-manager-credentials
                   key: api-password
+            - name: RUN_AS
+              value: "false"
             - name: LOGGING_LEVEL
               value: "info"
           volumeMounts:

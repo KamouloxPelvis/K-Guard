@@ -31,7 +31,7 @@
    */
   const fetchAlerts = async () => {
     try {
-      const response = await api.get('/api/security/alerts');
+      const response = await api.get('/security/alerts');
       
       alerts.value = response.data.map((hit: any) => ({
         id: hit._id,

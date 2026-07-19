@@ -164,7 +164,7 @@ func setupCredentials(rootPath, username, password string) error {
 	sb.WriteString("# --- AUTHENTICATION & SECURITY ---\n")
 	sb.WriteString(fmt.Sprintf("ADMIN_USERNAME=%s\n", username))
 	sb.WriteString(fmt.Sprintf("ADMIN_PASSWORD_HASH=%s\n", string(hash)))
-	sb.WriteString(fmt.Sprintf("SECRET_KEY=kguard_%d\n", time.Now().Unix()))
+	sb.WriteString(fmt.Sprintf("SECRET_KEY=%s\n", generateSecureToken(32)))
 	sb.WriteString("ALGORITHM=HS256\n")
 	sb.WriteString("ACCESS_TOKEN_EXPIRE_MINUTES=600\n\n")
 

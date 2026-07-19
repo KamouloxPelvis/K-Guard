@@ -97,4 +97,4 @@ jobs:
           else
             MESSAGE="⚠️ **K-GUARD**: Critical deployment failure on SHA ${{ github.sha }}! ❌"
           fi
-          curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"$MESSAGE\"}" ${{ secrets.DISCORD_WEBHOOK_URL }}ù
+          curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"$MESSAGE\"}" ${{ secrets.DISCORD_WEBHOOK_URL }}

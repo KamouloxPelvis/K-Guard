@@ -90,6 +90,7 @@
     const titles: Record<string, string> = {
       '/': 'System Overview',
       '/security': 'Runtime Observability & Security',
+      '/wazuh': 'Endpoint & Compliance',
       '/sentinel': 'Network Sentinel',
       '/settings': 'Settings'
     };
@@ -137,6 +138,19 @@
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">Runtime Observability & Security</span>
             <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Falco Detection</span>
+          </div>
+        </router-link>
+
+        <router-link
+          to="/wazuh"
+          @click="isMenuOpen = false"
+          class="nav-link py-2"
+          :class="route.path === '/wazuh' ? 'nav-active' : 'nav-inactive'"
+        >
+          <span class="text-lg">🖥️</span>
+          <div class="flex flex-col md:hidden lg:flex ml-3">
+            <span class="text-[10px] font-bold uppercase tracking-widest">Endpoint & Compliance</span>
+            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Wazuh Inventory</span>
           </div>
         </router-link>
 
