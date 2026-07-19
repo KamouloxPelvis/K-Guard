@@ -1,9 +1,10 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: wazuh-indexer
   namespace: k-guard
 spec:
+  serviceName: wazuh-indexer
   replicas: 1
   selector:
     matchLabels:
@@ -13,55 +14,48 @@ spec:
       labels:
         app: wazuh-indexer
     spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
       containers:
       - name: wazuh-indexer
         image: wazuh/wazuh-indexer:4.14.6
-        command: ["/bin/bash", "-c"]
-        args:
-          - rm -f /etc/wazuh-indexer/certs/*.pem && /usr/share/opensearch/opensearch-docker-entrypoint.sh
         ports:
-        - containerPort: 9200
+        - name: https
+          containerPort: 9200
+        - name: transport
+          containerPort: 9300
         env:
         - name: discovery.type
-          value: "single-node"
-        - name: DISABLE_SECURITY_PLUGIN
-          value: "true"
-        - name: network.host
-          value: "0.0.0.0"
-        - name: node.name
-          value: "wazuh-indexer"
-        - name: cluster.name
-          value: "wazuh-cluster"
-        - name: OPENSEARCH_JAVA_OPTS
-          value: "-Xms512m -Xmx512m"
+          value: single-node
         - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
-          value: "KGuard2026!"
-        - name: plugins.security.ssl.http.enabled
-          value: "false"
-        - name: plugins.security.ssl.transport.enabled
-          value: "false"
+          valueFrom:
+            secretKeyRef:
+              name: wazuh-indexer-credentials
+              key: admin-password
         volumeMounts:
-        - name: wazuh-data
-          mountPath: /usr/share/opensearch/data
-        - name: config-volume
-          mountPath: /usr/share/opensearch/config/opensearch.yml
+        - name: indexer-data
+          mountPath: /var/lib/wazuh-indexer
+        - name: indexer-config
+          mountPath: /usr/share/wazuh-indexer/config/opensearch.yml
           subPath: opensearch.yml
+          readOnly: true
+        - name: indexer-certs
+          mountPath: /usr/share/wazuh-indexer/config/certs
+          readOnly: true
       volumes:
-      - name: wazuh-data
-        persistentVolumeClaim:
-          claimName: wazuh-data-pvc
-      - name: config-volume
+      - name: indexer-config
         configMap:
           name: wazuh-indexer-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: wazuh-indexer
-  namespace: k-guard
-spec:
-  selector:
-    app: wazuh-indexer
-  ports:
-    - port: 9200
-      targetPort: 9200
+      - name: indexer-certs
+        secret:
+          secretName: wazuh-certs
+  volumeClaimTemplates:
+  - metadata:
+      name: indexer-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 20Gi

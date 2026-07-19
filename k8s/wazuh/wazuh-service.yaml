@@ -20,3 +20,23 @@ spec:
       targetPort: 55000
       protocol: TCP
   type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-indexer
+  namespace: k-guard
+spec:
+  clusterIP: None
+  selector:
+    app: wazuh-indexer
+  ports:
+  - name: https
+    protocol: TCP
+    port: 9200
+    targetPort: https
+  - name: transport
+    protocol: TCP
+    port: 9300
+    targetPort: transport

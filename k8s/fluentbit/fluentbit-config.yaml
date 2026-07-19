@@ -21,6 +21,7 @@ data:
         Skip_Long_Lines   On
         Refresh_Interval  5
         Read_from_Head    On
+        Rotate_Wait       5
 
     [FILTER]
         Name              rewrite_tag
@@ -68,11 +69,13 @@ data:
         Json_date_format  iso8601
         Retry_Limit       5
 
-    [OUTPUT] # Wazuh
-        Name              forward
-        Match             falco.*
-        Host              wazuh-manager-service.wazuh.svc.cluster.local
-        Port              1514
+    [OUTPUT] # Wazuh (Syslog)
+        Name          syslog
+        Match         falco.*
+        Host          wazuh-manager-service.k-guard.svc.cluster.local
+        Port          1514
+        Mode          tcp
+        Syslog_Format rfc5424
 
   parsers.conf: |
     [PARSER]
@@ -90,7 +93,7 @@ data:
 
         local new_record = {}
         -- roomId sera injecté dynamiquement par ton Python via re.sub
-        new_record["roomId"] = "PLACEHOLDER_ROOM_ID"
+        new_record["roomId"] = "Y2lzY29zcGFyazovL3VybjpURUFNOmV1LWNlbnRyYWwtMV9rL1JPT00vYWE2MjM5MDAtMTczNy0xMWYxLTg4ZDItY2IyY2E0NThhOTU4"
         new_record["markdown"] = "**K-Guard Alert**\n* Rule: " .. r .. "\n* Priority: " .. p .. "\n* Details: " .. alert_text
 
         return 1, timestamp, new_record
