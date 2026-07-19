@@ -38,3 +38,4 @@ Thumbs.db
 
 # Secret Wazuh
 /k8s/wazuh/.secret_password
+/k8s/wazuh/wazuh-certificates/

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-indexer-config
+  namespace: k-guard
+data:
+  opensearch.yml: |
+    cluster.name: wazuh-cluster
+    node.name: wazuh-indexer-0
+    network.host: 0.0.0.0
+    http.port: 9200
+    transport.port: 9300
+    discovery.type: single-node
+    compatibility.override_main_response_version: true
+
+    plugins.security.ssl.transport.pemcert_filepath: certs/indexer.pem
+    plugins.security.ssl.transport.pemkey_filepath: certs/indexer-key.pem
+    plugins.security.ssl.transport.pemtrustedcas_filepath: certs/root-ca.pem
+    plugins.security.ssl.transport.enforce_hostname_verification: false
+
+    plugins.security.ssl.http.enabled: true
+    plugins.security.ssl.http.pemcert_filepath: certs/indexer.pem
+    plugins.security.ssl.http.pemkey_filepath: certs/indexer-key.pem
+    plugins.security.ssl.http.pemtrustedcas_filepath: certs/root-ca.pem
+
+    plugins.security.authcz.admin_dn:
+      - "CN=admin"
+
+    plugins.security.nodes_dn:
+      - "CN=wazuh-indexer"

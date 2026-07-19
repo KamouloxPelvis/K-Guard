@@ -15,7 +15,7 @@ spec:
       labels:
         app: k-guard
     spec:
-      terminationGracePeriodSeconds: 60 
+      terminationGracePeriodSeconds: 60
       serviceAccountName: k-guard-sa
       automountServiceAccountToken: true
       imagePullSecrets:
@@ -24,7 +24,6 @@ spec:
         fsGroup: 1000
         supplementalGroups: [988]
       volumes:
-        # Docker socket required for Falco/Container monitoring
         - name: docker-socket
           hostPath:
             path: /var/run/docker.sock
@@ -32,11 +31,16 @@ spec:
         - name: temp-storage
           emptyDir:
             sizeLimit: 500Mi
-        # Persistent storage for application database
         - name: db-storage
           hostPath:
             path: /var/lib/kguard/db
             type: DirectoryOrCreate
+        - name: wazuh-api-ca
+          secret:
+            secretName: wazuh-api-ca
+            items:
+              - key: ca.pem
+                path: ca.pem
       containers:
         - name: kguard-app
           image: ghcr.io/kamouloxpelvis/kguard-app:v1.5.0
@@ -64,25 +68,41 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 45
           volumeMounts:
-            - mountPath: /var/run/docker.sock
-              name: docker-socket
-            - mountPath: /tmp
-              name: temp-storage
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
+            - name: temp-storage
+              mountPath: /tmp
             - name: db-storage
               mountPath: /app/data
+            - name: wazuh-api-ca
+              mountPath: /etc/kguard/wazuh-api-ca
+              readOnly: true
           env:
             - name: K8S_MODE
               value: "in-cluster"
             - name: DB_DIR
               value: "/app/data"
-            # Updated to point to the new local namespace service
             - name: ELASTICSEARCH_URL
               value: "http://elasticsearch-es-http.k-guard.svc.cluster.local:9200"
             - name: ELASTICSEARCH_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: elasticsearch-es-elastic-user 
+                  name: elasticsearch-es-elastic-user
                   key: elastic
+            - name: WAZUH_API_URL
+              value: "https://wazuh-manager-service.k-guard.svc.cluster.local:55000"
+            - name: WAZUH_API_CA_FILE
+              value: "/etc/kguard/wazuh-api-ca/ca.pem"
+            - name: WAZUH_API_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-manager-credentials
+                  key: api-username
+            - name: WAZUH_API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-manager-credentials
+                  key: api-password
           envFrom:
             - secretRef:
                 name: k-guard-secrets

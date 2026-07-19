@@ -1,3 +1,63 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-manager-api
+  namespace: k-guard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-manager-etc
+  namespace: k-guard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-manager-logs
+  namespace: k-guard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-manager-queue
+  namespace: k-guard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wazuh-manager-multigroups
+  namespace: k-guard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,6 +65,8 @@ metadata:
   namespace: k-guard
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: wazuh-manager
@@ -16,45 +78,86 @@ spec:
       containers:
       - name: wazuh-manager
         image: wazuh/wazuh-manager:4.14.6
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: agent
+          containerPort: 1514
+          protocol: TCP
+        - name: enrollment
+          containerPort: 1515
+          protocol: TCP
+        - name: api
+          containerPort: 55000
+          protocol: TCP
+        env:
+        - name: INDEXER_URL
+          value: "https://wazuh-indexer.k-guard.svc.cluster.local:9200"
+        - name: INDEXER_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: wazuh-manager-credentials
+              key: indexer-username
+        - name: INDEXER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wazuh-manager-credentials
+              key: indexer-password
+        - name: API_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: wazuh-manager-credentials
+              key: api-username
+        - name: API_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wazuh-manager-credentials
+              key: api-password
+        - name: FILEBEAT_SSL_VERIFICATION_MODE
+          value: "full"
+        - name: SSL_CERTIFICATE_AUTHORITIES
+          value: "/etc/filebeat/certs/root-ca.pem"
+        - name: SSL_CERTIFICATE
+          value: "/etc/filebeat/certs/filebeat.pem"
+        - name: SSL_KEY
+          value: "/etc/filebeat/certs/filebeat-key.pem"
         securityContext:
           privileged: true
           capabilities:
-            add: ["NET_BIND_SERVICE"]
-        command: ["/bin/sh", "-c"]
-        args:
-          - |
-            sleep 10
-            cp /var/ossec/etc/custom/ossec.conf /var/ossec/etc/ossec.conf
-            /init
-        env:
-        - name: ELASTICSEARCH_HOSTS
-          value: "http://wazuh-indexer.k-guard.svc.cluster.local:9200"
-        - name: FILEBEAT_ENABLED
-          value: "yes"
-        - name: API_USER
-          value: "admin"
-        - name: API_PASS
-          value: "KGuard2026!"
+            add:
+            - NET_BIND_SERVICE
+            - SYS_ADMIN
+            - SYS_RESOURCE
         volumeMounts:
-        - name: wazuh-data
-          mountPath: /var/ossec/data
+        - name: wazuh-api
+          mountPath: /var/ossec/api/configuration
+        - name: wazuh-etc
+          mountPath: /var/ossec/etc
         - name: wazuh-logs
           mountPath: /var/ossec/logs
-        - name: config-volume
-          mountPath: /var/ossec/etc/custom/
-        - name: filebeat-config
-          mountPath: /etc/filebeat/filebeat.yml
-          subPath: filebeat.yml
+        - name: wazuh-queue
+          mountPath: /var/ossec/queue
+        - name: wazuh-multigroups
+          mountPath: /var/ossec/var/multigroups
+        - name: filebeat-certs
+          mountPath: /etc/filebeat/certs
+          readOnly: true
       volumes:
-      - name: wazuh-data
+      - name: wazuh-api
         persistentVolumeClaim:
-          claimName: wazuh-data-pvc
+          claimName: wazuh-manager-api
+      - name: wazuh-etc
+        persistentVolumeClaim:
+          claimName: wazuh-manager-etc
       - name: wazuh-logs
         persistentVolumeClaim:
-          claimName: wazuh-logs-pvc
-      - name: config-volume
-        configMap:
-          name: wazuh-manager-config
-      - name: filebeat-config
-        configMap:
-          name: wazuh-filebeat-config-override
+          claimName: wazuh-manager-logs
+      - name: wazuh-queue
+        persistentVolumeClaim:
+          claimName: wazuh-manager-queue
+      - name: wazuh-multigroups
+        persistentVolumeClaim:
+          claimName: wazuh-manager-multigroups
+      - name: filebeat-certs
+        secret:
+          secretName: wazuh-manager-filebeat-certs
+          defaultMode: 0400

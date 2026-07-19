@@ -9,9 +9,9 @@ if [ -z "$1" ]; then
 fi
 
 # 2. Deploy Secret
-kubectl create secret generic wazuh-indexer-admin-password \
+kubectl create secret generic wazuh-indexer-credentials \
   -n k-guard \
-  --from-literal=password="$1" \
+  --from-literal=admin-password="$1" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # 3. Apply infrastructure manifests

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-indexer-config
+  namespace: k-guard
+data:
+  opensearch.yml: |
+    cluster.name: "wazuh-cluster"
+    network.host: "0.0.0.0"
