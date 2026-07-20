@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-07-20
+
+### Added
+- **Wazuh Endpoint & Compliance**: Added a new read-only dashboard page for Wazuh-managed endpoint inventory.
+- **Endpoint Inventory**: Added visibility into agent status, hostname, IP address, operating system, architecture, group, agent version, and last keep-alive timestamp.
+- **Wazuh API Integration**: Added the protected `GET /api/wazuh/agents` endpoint for normalized Wazuh agent inventory retrieval.
+- **Secure Backend Client**: Added a backend-only Wazuh API client with temporary in-memory JWT caching and automatic re-authentication.
+- **Navigation**: Added the **Endpoint & Compliance** route and sidebar navigation entry.
+- **Documentation**: Added Wazuh deployment, credentials, TLS validation, API usage, CI/CD, security, and troubleshooting guidance to the README.
+
+### Changed
+- **Application Version**: Bumped K-Guard version from `1.4.0` to `1.5.0`.
+- **Security Architecture**: K-Guard now retrieves Wazuh data exclusively through its backend; Wazuh credentials and authentication tokens never reach the browser.
+- **TLS Configuration**: Updated the Wazuh Manager API certificate to include Kubernetes Service DNS SANs:
+  - `wazuh-manager-service`
+  - `wazuh-manager-service.k-guard`
+  - `wazuh-manager-service.k-guard.svc`
+  - `wazuh-manager-service.k-guard.svc.cluster.local`
+- **Certificate Trust**: Added the Wazuh API CA certificate as a read-only Kubernetes Secret mounted in the K-Guard workload.
+- **Deployment Configuration**: Added Wazuh API URL, credentials, and CA-file configuration to the K-Guard Kubernetes deployment.
+- **CI/CD Documentation**: Documented SHA-based container image deployment and recommended immutable image tags for Kubernetes releases.
+
+### Security
+- Enforced strict TLS certificate and hostname validation for K-Guard to Wazuh Manager API communication.
+- Added Kubernetes Secret-based handling for Wazuh API credentials and the trusted CA certificate.
+- Preserved the read-only scope of the Wazuh integration: no agent enrollment, configuration changes, remediation, or credential exposure from the K-Guard UI.
+
+### Validation
+- Verified TLS connectivity from the K-Guard pod to the Wazuh Manager API.
+- Verified Wazuh API authentication with HTTP `200`.
+- Verified Wazuh agent inventory retrieval with HTTP `200`.
+- Verified successful K-Guard image build, GitHub Actions deployment, and K3s rollout.
+
 ## [1.3.1] - 2026-06-18
 
 ### Changed

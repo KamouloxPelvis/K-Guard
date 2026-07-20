@@ -1,0 +1,206 @@
+
+⚠️ Warning: Disclaimer
+
+*K-Guard is engineered in alignment with industry security standards, following the [![OpenSSF Baseline](https://www.bestpractices.dev/projects/12124/baseline)](https://www.bestpractices.dev/projects/12124). It is officially featured on the Cisco DevNet Code Exchange Platform [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/KamouloxPelvis/K-Guard)*
+
+*While security is a core priority, this software is provided as a personal and experimental Minimum Viable Product (MVP). It is designed as a research tool for exploring DevSecOps security architectures. As an evolving Open Source project, K-Guard is subject to continuous improvement and community-driven hardening.*
+
+**K-Guard** is a security governance and observability platform for K3s clusters. It automates the full security lifecycle: Runtime Security alterts & monitoring (**Falco**, **Fluent Bit**, **ElasticSearch**, **Kibana**), Network Remediation (**Network Sentinel/Ansible**), and ChatOps Alerting (**Cisco Webex**).
+
+---
+
+## 📍 Summary
+
+* [🧪 Tech Stack](#en-tech-stack)
+* [🚀 Key Features](#en-key-features)
+* [📖 API Documentation & Reference](#en-api-documentation--reference)
+* [🛠️ Installation & Setup](#en-installation--setup)
+    * [1. CLI Installer (Go)](#en-1-cli-installer-go)
+    * [⚠️ CNI Recommendation](#en-network-isolation-recommendation)
+    * [2. Auto-check & Dependencies](#en-2-auto-check--dependencies)
+    * [3. Quick Install](#en-3-quick-start-procedure)
+    * [4. Accessing the Dashboard](#en-accessing-dashboard)
+* [🛰️ Cisco Webex Integration](#en-cisco-webex-integration)
+* [🛡️ Network Policy (Network Sentinel)](#en-network-policy--network-sentinel)
+* [👤 Contact & Credits](#en-contact--credits)
+
+---
+
+## 🧪 <a name="en-tech-stack"></a>Tech Stack
+
+* **Backend**: FastAPI (Python).
+* **Frontend**: Vue.js 3, Tailwind CSS, Fetch, JWT Auth.
+* **Installer**: Go (Bubble Tea / Lipgloss).
+
+* **Integrations**: Falco, Fluentbit, ElasticSearch, Kibana, Webex Webhook.
+
+* **Environment**: Optimized for Debian-based distributions (Debian 12/13, Ubuntu 24.04+). Engineered specifically for stable performance on VPS environments.
+
+---
+
+## 🚀 <a name="en-key-features"></a>Key Features
+
+## 🛡️ Runtime Security: ELK Stack
+
+K-Guard integrates a dedicated **Runtime Security Operations Center (SOC)** powered by the Elastic Stack (Elasticsearch & Kibana). This module provides deep observability into system calls and container behavior, detecting anomalies in real-time.
+
+* **Falco Integration**: Capture and stream runtime security events directly into the Elastic index.
+* **Security Dashboarding**: Visualize threat activity heatmaps, container security audits, and severity distributions.
+* **Live Alert Feed**: Real-time monitoring of security violations, with automated persistence in the cluster.
+
+![K-Guard Runtime SOC](frontend/public/screenshots/kguard-security.png)
+
+* **Network Sentinel**: Implements idempotent Zero-Trust NetworkPolicies via Ansible playbooks.
+
+![K-Guard System Overview](frontend/public/screenshots/kguard-network_map-1.png)
+
+* **Cisco Webex ChatOps**: Real-time incident alerting with persistent integration settings in SQLite.
+
+![K-Guard System Overview](frontend/public/screenshots/kguard-settings.png)
+
+* **SRE Control Center**: Live monitoring of cluster latency, storage diagnostics, and pod health.
+
+![K-Guard System Overview](frontend/public/screenshots/kguard-network_map-2.png)
+
+---
+
+## 📖 API Documentation & Reference
+
+K-Guard automatically generates interactive API documentation using **Swagger UI (OpenAPI 3.1)**. This allows developers and security auditors to explore and test all endpoints directly from the browser.
+
+- **Interactive UI:** `http://<your-domain-or-ip>/docs`
+- **Features documented:** - 🔍 K3s Infrastructure Metrics
+  - 🔐 Authentication & Token management
+  - 💓 System Health Checks (Liveness Probes)
+
+---
+
+## 🛠️ <a name="en-installation--setup"></a>Installation & Setup
+
+![K-Guard System Overview](frontend/public/screenshots/kguard-install.png)
+
+### 📋 Prerequisites
+
+* **OS** : Debian or Ubuntu Server (Clean installation recommended).
+
+* **Privileges**: Root or sudo access required for K3s and Docker deployment.
+
+* **Architecture** : x86_64 compatible VPS.
+
+### <a name="en-1-cli-installer-go"></a>1. CLI Installer (Go)
+Full stack deployment via a specialized **Go** installer:
+* Checks system dependencies and Docker socket accessibility.
+* Handles secure credential hashing with `bcrypt`.
+* Syncs secrets to K3s and deploys core manifests.
+
+### <a name="en-network-isolation-recommendation"></a>⚠️ *Network Isolation Recommendation (CNI)*
+*To ensure strict micro-segmentation via Network Policies, implementing an advanced CNI (Calico, Cilium, Kube-router) is critical. Using the default Flannel CNI will keep the application functional, but East-West (inter-pod) filtering rules will be ignored by the cluster*.
+
+### <a name="en-2-auto-check--dependencies"></a>2. Auto-check & Dependencies
+The assistant launches a "Pre-flight check" script to validate the secure configuration of Docker and the K3s API. The installer automates the dependency lifecycle using native apt package management, ensuring full compatibility with Debian-based .deb ecosystems.
+
+Host prerequisites:
+* K3s (`curl -sfL https://get.k3s.io | sh -`).
+* Docker (`sudo apt install docker.io -y`).Debian-based .deb ecosystems
+* Python 3 & Pip.
+
+### <a name="en-3-quick-start-procedure"></a>3. Quick Install procedure
+
+```bash
+# Clone the repository
+git clone [https://gitlab.com/portfolio-kamal-guidadou/k-guard.git](https://gitlab.com/portfolio-kamal-guidadou/k-guard.git)
+
+cd installer (folder : k-guard/installer)
+
+# Grant execution rights
+chmod +x install-kguard
+
+# Launch installation & follow the wizard
+./kguard-install or sudo ./kguard-install
+```
+---
+
+## 4. <a name="en-accessing-dashboard"></a>Accessing the Dashboard & ELK
+
+![K-Guard System Overview](frontend/public/screenshots/kguard-system_overview-1.png)
+
+Once the deployment is finalized, K-Guard and the ELK stack are exposed via your cluster Ingress.
+
+* K-Guard Dashboard: Navigate to http://<VPS_IP> (or your configured hostname).
+
+### Elasticsearch/Kibana Admin:
+
+To access the full SOC dashboard, log in with the elastic user.
+
+* Retrieve your password: Execute the following command on your node:
+
+```bash
+kubectl get secret elasticsearch-es-elastic-user -n k-guard -o go-template='{{.data.elastic | base64decode}}'
+```
+* Store this password securely. For security best practices, do not commit it to any repository. 
+
+### Wazuh
+
+To ensure security, this project does not store sensitive credentials for Wazuh.
+
+After deploying the infrastructure, you must set your admin password.
+
+Use the provided deployment script:
+
+```bash
+
+cd /k8s/wazuh
+
+./deploy-secrets.sh <your_chosen_password>
+```
+
+You can then log in to the dashboard at http://<your-ip>:5601 with:
+
+Username: admin
+
+Password: The password you provided to the script.
+
+---
+
+## 🛰️ <a name="en-cisco-webex-integration"></a>Cisco Webex Integration
+
+Transform technical security audits into real-time operational alerts :
+1.  **Enable**: Toggle the Webex notifier directly from the **Settings** panel.
+2.  **Configure**: Enter your `Bot Access Token` and your `Target Room ID`.
+3.  **Validate**: Settings are persisted in the `kguard.db` SQLite database only after a successful connectivity test.
+
+![K-Guard System Overview](frontend/public/screenshots/kguard-webex.png)
+
+---
+
+## 🛡️ <a name="en-network-policy--network-sentinel"></a>Network Policy (Network Sentinel)
+
+K-Guard enforces a **Zero-Trust** security posture by leveraging an automated, idempotent remediation engine powered by **Ansible Core**.
+
+### ⚙️ The Hardening Engine (`harden_policies.yml`)
+At the heart of the "Network Sentinel" lies a sophisticated Ansible playbook that orchestrates the cluster security lifecycle:
+* **Auto-Discovery**: Dynamically scans the cluster to identify active namespaces and running workloads (excluding critical system namespaces).
+* **Port Mapping**: Automatically extracts container ports from running pods to ensure that legitimate traffic is never interrupted during hardening.
+* **Idempotent Deployment**: Uses the `kubernetes.core.k8s` module to ensure that the security state is always consistent with the desired policy, preventing configuration drift.
+
+### 📄 Dynamic Templates (Jinja2)
+K-Guard utilizes **Jinja2 templates** to generate context-aware security rules on the fly:
+* **`core_baseline.j2`**: Implements the "Default Deny" foundation (Ingress/Egress isolation).
+* **`app_internal_bridge.j2`**: Automatically links Ingress Controllers to discovered application ports.
+* **`app_egress.j2`**: Hardened outbound rules for specific services (e.g., MongoDB Atlas, Cisco Webex API) using CIDR and Port filtering.
+* **`audit_exception.j2`**: Secure "Diagnostic Corridors" allowing the K-Guard Sentinel to perform health checks without compromising the overall Zero-Trust stance.
+
+### 🚀 UI-Driven Remediation (Settings)
+Through the **"Deploy Hardening"** feature in the Settings panel, users can trigger the Ansible engine with a single click. This bridges the gap between high-level security intent and low-level YAML execution:
+* **Visual Topology**: Real-time identification of vulnerable or isolated nodes.
+* **One-Click Hardening**: Instantly applies the entire Ansible-driven security suite to the cluster.
+* **Diagnostic Sentinel**: Integrated connectivity audit to verify that policies are effective but not disruptive.
+
+---
+
+## 👤 <a name="en-contact--credits"></a>Contact & Credits
+
+© 2026 - **Kamal Guidadou** *SysAdmin & DevSecOps*
+
+* 🌐 **Portfolio**: [https://portfolio.devopsnotes.org](https://portfolio.devopsnotes.org)
+* ✍️ **Tech Blog**: [https://blog.devopsnotes.org](https://blog.devopsnotes.org)

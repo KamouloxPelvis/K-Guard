@@ -17,7 +17,7 @@ load_dotenv(dotenv_path=base_dir / ".env")
 
 app = FastAPI(
     title="🛡️ K-Guard API",
-    version="1.6.0",
+    version="1.5.0",
     description="Backend API for K-Guard: Operational Infrastructure Security & Observability Platform",
 )
 
