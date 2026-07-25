@@ -43,7 +43,7 @@ spec:
                 path: ca.pem
         - name: wazuh-indexer-ca
           secret:
-            secretName: wazuh-indexer-certs
+            secretName: wazuh-indexer-server-ca
             items:
               - key: root-ca.pem
                 path: root-ca.pem
