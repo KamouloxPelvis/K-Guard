@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 
@@ -95,4 +96,10 @@ async def get_wazuh_overview():
                 "K-Guard will display them automatically when Wazuh publishes data."
             ),
         },
+    }
+
+@router.get("/dashboard-url")
+async def get_wazuh_dashboard_url():
+    return {
+        "url": os.getenv("WAZUH_DASHBOARD_URL", "").strip()
     }

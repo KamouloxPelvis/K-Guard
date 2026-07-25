@@ -170,8 +170,12 @@ func setupCredentials(rootPath, username, password string) error {
 
 	sb.WriteString("# --- NETWORK CONFIGURATION ---\n")
 	// Using the dynamically retrieved publicIP here
-	sb.WriteString(fmt.Sprintf("ALLOWED_ORIGINS=http://localhost:8000,http://%s:8000,http://k-guard.local:8000\n", publicIP))
+	sb.WriteString(fmt.Sprintf(
+    "ALLOWED_ORIGINS=http://localhost:8000,http://%s:8000,http://k-guard.local:8000\n",
+    publicIP,
+	))
 	sb.WriteString(fmt.Sprintf("USER_DOMAIN=%s\n", publicIP))
+	sb.WriteString(fmt.Sprintf("WAZUH_DASHBOARD_URL=http://%s:31001\n", publicIP))
 	sb.WriteString("PROJECT_NAME=K-Guard\n")
 	sb.WriteString("KGUARD_PROTECTED_NS=k-guard\n")
 

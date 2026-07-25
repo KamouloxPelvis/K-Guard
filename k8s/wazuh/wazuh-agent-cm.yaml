@@ -35,6 +35,7 @@ data:
         <log_format>plain</log_format>
       </logging>
 
+      <!-- Host log collection -->
       <localfile>
         <log_format>syslog</log_format>
         <location>/var/log/syslog</location>
@@ -44,4 +45,32 @@ data:
         <log_format>syslog</log_format>
         <location>/var/log/auth.log</location>
       </localfile>
+
+      <!-- File Integrity Monitoring: host configuration only -->
+      <syscheck>
+        <disabled>no</disabled>
+        <frequency>43200</frequency>
+        <scan_on_start>yes</scan_on_start>
+        <alert_new_files>yes</alert_new_files>
+
+        <directories check_all="yes" realtime="yes">/host/etc</directories>
+        <directories check_all="yes" realtime="yes">/host/var/lib/rancher/k3s/server/manifests</directories>
+        <directories check_all="yes" realtime="yes">/host/var/lib/rancher/k3s/server/cred</directories>
+
+        <ignore type="sregex">\.swp$|~$|\.tmp$</ignore>
+      </syscheck>
+
+      <!-- System inventory: OS, packages, ports, processes -->
+      <wodle name="syscollector">
+        <disabled>no</disabled>
+        <interval>1h</interval>
+        <scan_on_start>yes</scan_on_start>
+
+        <hardware>yes</hardware>
+        <os>yes</os>
+        <network>yes</network>
+        <packages>yes</packages>
+        <ports all="no">yes</ports>
+        <processes>yes</processes>
+      </wodle>
     </ossec_config>

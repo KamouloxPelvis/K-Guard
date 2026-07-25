@@ -24,6 +24,7 @@ K-Guard does not replace a complete SOC process, vulnerability-management progra
 - [Tech Stack](#tech-stack)
 - [Key Features](#key-features)
 - [Wazuh Endpoint & Compliance](#wazuh-endpoint--compliance)
+- [Wazuh Security Posture & Alerts](#wazuh-security-posture--alerts)
 - [Wazuh Credentials](#wazuh-credentials)
 - [Runtime Security](#runtime-security)
 - [Network Sentinel](#network-sentinel)
@@ -391,6 +392,67 @@ AUTH: 200
 AGENTS: 200
 TOTAL: <number_of_agents>
 ```
+
+---
+
+## Wazuh Security Posture & Alerts
+
+### Purpose
+
+K-Guard uses the Wazuh Manager API to retrieve endpoint inventory, security posture indicators, and alert data, then exposes them in the dashboard.
+
+The current integration is read-only. It does not enroll agents, restart agents, modify Wazuh rules, change policies, or expose Wazuh credentials to the browser.
+
+### Security Posture
+
+The Security Posture view provides a normalized security-focused overview of monitored endpoints.
+
+It highlights:
+
+- Endpoint posture and compliance signals.
+- Managed agent inventory.
+- State of monitored assets.
+- Read-only security visibility for operational review.
+
+![K-Guard Wazuh Security Posture](frontend/public/screenshots/kguard-wazuh-security-posture.png)
+
+### Alerts
+
+The Alerts view centralizes Wazuh alerts surfaced by the backend.
+
+It is designed to help an operator:
+
+- Review active and recent alerts.
+- Investigate endpoint-related security events.
+- Correlate alert volume with endpoint posture.
+- Keep Wazuh credentials confined to the backend.
+
+![K-Guard Wazuh Alerts 1](frontend/public/screenshots/kguard-wazuh-alerts-1.png)
+
+![K-Guard Wazuh Alerts 2](frontend/public/screenshots/kguard-wazuh-alerts-2.png)
+
+### Endpoint Inventory
+
+The Endpoint & Compliance page provides a normalized inventory of monitored Wazuh agents.
+
+It displays:
+
+- Total managed endpoints.
+- Active agents.
+- Disconnected agents.
+- Never-connected agents.
+- Endpoint hostname.
+- Agent identifier.
+- Agent version.
+- IP address.
+- Operating system.
+- Architecture.
+- Wazuh agent group.
+- Last keep-alive timestamp.
+
+![K-Guard Wazuh Endpoints 1](frontend/public/screenshots/kguard-wazuh-endpoints-1.png)
+
+![K-Guard Wazuh Endpoints 2](frontend/public/screenshots/kguard-wazuh-endpoints-2.png)
 
 ---
 

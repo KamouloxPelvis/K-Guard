@@ -11,13 +11,16 @@ data:
     opensearch.hosts:
       - "https://wazuh-indexer.k-guard.svc.cluster.local:9200"
 
-    opensearch.ssl.verificationMode: certificate
+    opensearch.username: "kibanaserver"
+    opensearch.password: "zNsscTaISd8ODDVETQOdwvn8cGymtBC1"
+
+    opensearch.ssl.verificationMode: none
     opensearch.ssl.certificateAuthorities:
       - /usr/share/wazuh-dashboard/config/certs/root-ca.pem
 
-    opensearch.requestHeadersAllowlist:
+    opensearch.requestHeadersWhitelist:
       - securitytenant
-      - Authorization
+      - authorization
 
     opensearch_security.multitenancy.enabled: false
     opensearch_security.readonly_mode.roles:

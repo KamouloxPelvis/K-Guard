@@ -43,7 +43,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: wazuh-dashboard-credentials
-                  key: indexer-password
+                  key: dashboard-password
             - name: WAZUH_API_URL
               value: "https://wazuh-manager-service.k-guard.svc.cluster.local"
             - name: API_PORT
