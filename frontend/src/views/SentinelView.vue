@@ -272,121 +272,527 @@
 
   <template>
     <div class="p-4 lg:p-6 space-y-4 relative max-w-[1600px] mx-auto">
+      <!-- Header + controls -->
+      <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+        <div class="xl:col-span-3 bg-[#111217] border border-slate-800/60 rounded-sm p-5">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="space-y-1">
+              <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em]">
+                Automated Micro-segmentation
+              </p>
+              <div class="flex items-center gap-3 flex-wrap">
+                <h2 class="text-lg font-black text-white uppercase tracking-tighter">
+                  Network Sentinel <span class="text-blue-500">v2.0</span>
+                </h2>
 
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div class="lg:col-span-3 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111217] p-5 border border-slate-800/60 rounded-sm">
+                <span
+                  v-if="isHardened"
+                  class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+                >
+                  Policies Active
+                </span>
+
+                <span
+                  v-else
+                  class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-amber-500/40 bg-amber-500/10 text-amber-400"
+                >
+                  Unhardened
+                </span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="inline-flex p-1 bg-[#0b0c10] border border-slate-700 rounded-sm">
+                <button
+                  @click="currentViewMode = 'list'"
+                  :class="currentViewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'"
+                  class="px-3 py-1 text-[8px] font-black uppercase tracking-widest rounded-sm transition-all"
+                >
+                  List
+                </button>
+                <button
+                  @click="currentViewMode = 'topology'"
+                  :class="currentViewMode === 'topology' ? 'bg-orange-600 text-white' : 'text-slate-500 hover:text-slate-300'"
+                  class="px-3 py-1 text-[8px] font-black uppercase tracking-widest rounded-sm transition-all"
+                >
+                  Topology
+                </button>
+              </div>
+
+              <select
+                v-model="selectedNS"
+                class="bg-[#0b0c10] border border-slate-700 text-[9px] text-slate-300 px-3 py-1.5 rounded-sm uppercase font-bold tracking-widest cursor-pointer"
+              >
+                <option v-for="ns in namespaces" :key="ns" :value="ns">
+                  {{ ns }}
+                </option>
+              </select>
+
+              <button
+                @click="init"
+                :disabled="isLoading"
+                class="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-600 text-slate-300 px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all"
+              >
+                {{ isLoading ? 'Syncing...' : 'Refresh Audit' }}
+              </button>
+
+              <button
+                v-if="!isHardened"
+                @click="triggerHarden"
+                :disabled="isDeploying"
+                class="bg-[#f05a28]/10 hover:bg-[#f05a28]/20 disabled:opacity-50 disabled:cursor-not-allowed border border-[#f05a28] text-[#f05a28] px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all"
+              >
+                {{ isDeploying ? 'Deploying...' : 'Deploy Net Policies' }}
+              </button>
+
+              <button
+                v-else
+                @click="triggerDeactivate"
+                :disabled="isDeploying"
+                class="bg-red-500/10 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed border border-red-500 text-red-400 px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all"
+              >
+                Deactivate Policies
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security score -->
+        <div class="bg-[#111217] border border-slate-800/60 p-4 rounded-sm flex flex-col justify-between">
           <div>
-            <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em] mb-1">Automated Micro-segmentation</p>
-            <h2 class="text-lg font-black text-white uppercase tracking-tighter">Network Sentinel <span class="text-blue-500">v2.0</span></h2>
-          </div>
-          
-          <div class="flex flex-wrap items-center gap-3">
-            <div class="inline-flex p-1 bg-[#0b0c10] border border-slate-700 rounded-sm">
-              <button @click="currentViewMode = 'list'" :class="currentViewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-500'" class="px-3 py-1 text-[8px] font-black uppercase tracking-widest rounded-sm transition-all">List</button>
-              <button @click="currentViewMode = 'topology'" :class="currentViewMode === 'topology' ? 'bg-orange-600 text-white' : 'text-slate-500'" class="px-3 py-1 text-[8px] font-black uppercase tracking-widest rounded-sm transition-all">Topology</button>
-            </div>
-            <select v-model="selectedNS" class="bg-[#0b0c10] border border-slate-700 text-[9px] text-slate-300 px-3 py-1.5 rounded-sm uppercase font-bold tracking-widest cursor-pointer">
-              <option v-for="ns in namespaces" :key="ns" :value="ns">{{ ns }}</option>
-            </select>
-            <button @click="init" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all">
-              Refresh Audit
-            </button>
-            <template v-if="isHardened">
-            <div class="px-3 py-1 bg-green-500/10 border border-green-500 text-green-500 text-[8px] font-black uppercase tracking-widest rounded-sm">
-              Policies Active
-            </div>
-            <button @click="triggerDeactivate" class="bg-red-500/10 hover:bg-red-500/20 border border-red-500 text-red-500 px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all">
-              Deactivate Policies
-            </button>
-          </template>
-          
-          <template v-else>
-            <button @click="triggerHarden" class="bg-[#f05a28]/10 hover:bg-[#f05a28]/20 border border-[#f05a28] text-[#f05a28] px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all">
-              Deploy Net Policies
-            </button>
-          </template>
-        </div>
-          </div>
-        </div>
+            <p class="text-[8px] text-slate-500 uppercase font-bold tracking-[0.25em] mb-2">
+              Security Score
+            </p>
 
-        <div class="bg-[#111217] border border-slate-800/60 p-4 rounded-sm flex flex-col items-center justify-center">
-          <p class="text-[8px] text-slate-500 uppercase font-bold mb-1">Security Score</p>
-          <div class="relative flex items-center justify-center">
-            <svg class="w-16 h-16 transform -rotate-90">
-              <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3" fill="transparent" class="text-slate-800" />
-              <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3" fill="transparent" 
-                      :stroke-dasharray="175" 
-                      :stroke-dashoffset="175 - (175 * securityScore) / 100" 
-                      :class="securityScore < 50 ? 'text-red-500' : 'text-blue-500'" />
-            </svg>
-            <span class="absolute text-md font-black text-white">{{ securityScore }}%</span>
+            <div class="relative flex items-center justify-center py-2">
+              <svg class="w-20 h-20 transform -rotate-90">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="32"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="transparent"
+                  class="text-slate-800"
+                />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="32"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="transparent"
+                  stroke-linecap="round"
+                  :stroke-dasharray="201"
+                  :stroke-dashoffset="201 - (201 * securityScore) / 100"
+                  :class="securityScore < 50 ? 'text-red-500' : securityScore < 80 ? 'text-amber-400' : 'text-blue-500'"
+                />
+              </svg>
+
+              <span class="absolute text-lg font-black text-white">
+                {{ securityScore }}%
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-800/50">
+            <div class="bg-[#0b0c10] border border-slate-800 rounded-sm p-2">
+              <p class="text-[8px] text-slate-500 uppercase font-bold">Pods</p>
+              <p class="text-sm font-black text-white mt-1">{{ filteredPods.length }}</p>
+            </div>
+            <div class="bg-[#0b0c10] border border-slate-800 rounded-sm p-2">
+              <p class="text-[8px] text-slate-500 uppercase font-bold">Flows</p>
+              <p class="text-sm font-black text-white mt-1">{{ filteredEdges.length }}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div v-if="currentViewMode === 'topology'" class="bg-[#0b0c10] border border-slate-800/60 p-2 rounded-sm relative min-h-[500px] overflow-hidden flex items-center justify-center">
-        <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#3b82f6 1px, transparent 1px); background-size: 20px 20px;"></div>
-        
-        <svg v-show="pods.length > 0" viewBox="0 0 1000 500" class="w-full h-full max-w-4xl relative z-10">
-          <g v-for="edge in filteredEdges" :key="'base-' + edge.source + edge.target">
-            <path v-if="getEdgePath(edge)" :d="getEdgePath(edge)" fill="none" class="stroke-slate-800 stroke-[1]" />
-          </g>
-          
-          <g v-for="edge in filteredEdges" :key="'flow-' + edge.source + edge.target">
-            <path v-if="getEdgePath(edge)" :d="getEdgePath(edge)" fill="none" class="stroke-blue-500 stroke-[1.5] opacity-60 animate-dash-flow" stroke-dasharray="4 8" />
-          </g>
+      <!-- Topology -->
+      <div
+        v-if="currentViewMode === 'topology'"
+        class="bg-[#0b0c10] border border-slate-800/60 p-3 rounded-sm relative min-h-[540px] overflow-hidden"
+      >
+        <div
+          class="absolute inset-0 opacity-5"
+          style="background-image: radial-gradient(#3b82f6 1px, transparent 1px); background-size: 20px 20px;"
+        ></div>
 
-          <g v-for="(pod, idx) in filteredPods" :key="pod.id" @click="openRoleDetails(pod)" class="cursor-pointer group">
-            <rect :x="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').x - 50" 
-                  :y="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').y - 20" 
-                  width="100" height="40" rx="2" 
-                  :class="[isVulnerable(pod) ? 'fill-red-950 stroke-red-500' : 'fill-slate-900 stroke-blue-500', 'stroke-[1] transition-all group-hover:stroke-white']" />
-            <text :x="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').x" 
-                  :y="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').y + 4" 
-                  text-anchor="middle" class="fill-white text-[8px] font-mono font-bold uppercase">
-              {{ pod.role.length > 12 ? pod.role.substring(0,10)+'...' : pod.role }}
-            </text>
-          </g>
-        </svg>
+        <div
+          v-if="isLoading"
+          class="absolute inset-0 z-20 flex items-center justify-center bg-[#0b0c10]/80 backdrop-blur-[1px]"
+        >
+          <div class="text-center space-y-2">
+            <div class="w-10 h-10 mx-auto rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin"></div>
+            <p class="text-[10px] uppercase tracking-[0.3em] font-bold text-slate-400">
+              Synchronizing topology
+            </p>
+          </div>
+        </div>
 
-        <div v-if="pods.length === 0 && !isLoading" class="text-slate-500 text-xs">
-          Aucune donnée topologique disponible.
+        <div v-if="filteredPods.length > 0" class="relative z-10 w-full h-full flex items-center justify-center">
+          <svg viewBox="0 0 1000 500" class="w-full h-full max-w-6xl">
+            <!-- edges base -->
+            <g v-for="edge in filteredEdges" :key="'base-' + edge.source + '-' + edge.target">
+              <path
+                v-if="getEdgePath(edge)"
+                :d="getEdgePath(edge)"
+                fill="none"
+                class="stroke-slate-800 stroke-[1]"
+              />
+            </g>
+
+            <!-- edges animated -->
+            <g v-for="edge in filteredEdges" :key="'flow-' + edge.source + '-' + edge.target">
+              <path
+                v-if="getEdgePath(edge)"
+                :d="getEdgePath(edge)"
+                fill="none"
+                class="stroke-blue-500 stroke-[1.5] opacity-60 animate-dash-flow"
+                stroke-dasharray="4 8"
+              />
+            </g>
+
+            <!-- nodes -->
+            <g
+              v-for="(pod, idx) in filteredPods"
+              :key="pod.id"
+              @click="openRoleDetails(pod)"
+              class="cursor-pointer group"
+            >
+              <rect
+                :x="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').x - 62"
+                :y="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').y - 26"
+                width="124"
+                height="52"
+                rx="4"
+                :class="[
+                  isVulnerable(pod)
+                    ? 'fill-red-950/90 stroke-red-500'
+                    : 'fill-slate-900 stroke-blue-500',
+                  'stroke-[1.2] transition-all group-hover:stroke-white'
+                ]"
+              />
+
+              <text
+                :x="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').x"
+                :y="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').y - 2"
+                text-anchor="middle"
+                class="fill-white text-[9px] font-mono font-bold uppercase"
+              >
+                {{ pod.role?.length > 16 ? pod.role.substring(0, 16) + '…' : pod.role || 'unknown-role' }}
+              </text>
+
+              <text
+                :x="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').x"
+                :y="getNodePos(pod.id, idx, filteredPods.length, idx % 2 === 0 ? 'left' : 'right').y + 12"
+                text-anchor="middle"
+                class="fill-slate-400 text-[7px] font-mono uppercase"
+              >
+                {{ pod.namespace }}
+              </text>
+            </g>
+          </svg>
+        </div>
+
+        <div
+          v-else-if="!isLoading"
+          class="relative z-10 min-h-[500px] flex items-center justify-center"
+        >
+          <div class="text-center space-y-2">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.25em]">
+              No topology data
+            </p>
+            <p class="text-[11px] text-slate-500">
+              No pod or flow is currently available for the selected scope.
+            </p>
+          </div>
         </div>
       </div>
 
+      <!-- List -->
       <div v-if="currentViewMode === 'list'" class="space-y-6">
-        <div v-for="(nsPods, nsName) in podsByNamespace" :key="nsName" class="space-y-3">
-          <div class="flex items-center gap-3">
-            <h3 class="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">{{ nsName }}</h3>
-            <div class="h-[1px] flex-1 bg-slate-800/40"></div>
+        <div
+          v-if="isLoading"
+          class="bg-[#0b0c10] border border-slate-800/60 rounded-sm p-6 flex items-center justify-center"
+        >
+          <div class="text-center space-y-2">
+            <div class="w-10 h-10 mx-auto rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin"></div>
+            <p class="text-[10px] uppercase tracking-[0.3em] font-bold text-slate-400">
+              Loading Sentinel inventory
+            </p>
           </div>
+        </div>
 
-          <div class="space-y-2">
-            <div v-for="pod in nsPods" :key="pod.id" class="border border-slate-800/60 rounded-sm overflow-hidden">
-              <div @click="toggleAccordion(pod.id)" class="bg-[#111217] p-3 flex justify-between items-center cursor-pointer hover:bg-[#15171e] transition-colors">
-                <div class="flex items-center gap-3">
-                  <div :class="isVulnerable(pod) ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'" class="w-1.5 h-1.5 rounded-full"></div>
-                  <span class="text-[10px] font-bold text-white uppercase">{{ pod.name }}</span>
-                </div>
-                <span class="text-slate-500 text-[10px]">{{ activeAccordion === pod.id ? '−' : '+' }}</span>
-              </div>
+        <div
+          v-else-if="filteredPods.length === 0"
+          class="bg-[#0b0c10] border border-slate-800/60 rounded-sm p-8 text-center"
+        >
+          <p class="text-[10px] uppercase tracking-[0.3em] font-bold text-slate-400">
+            Empty scope
+          </p>
+          <p class="text-[11px] text-slate-500 mt-2">
+            No protected pod found for this namespace filter.
+          </p>
+        </div>
 
-              <div v-if="activeAccordion === pod.id" class="bg-[#0b0c10] p-4 border-t border-slate-800/40">
-                <div class="grid grid-cols-2 gap-4 text-[9px]">
-                  <div>
-                    <p class="text-slate-500 uppercase font-bold mb-1">IP Address</p>
-                    <p class="text-blue-400 font-mono">{{ pod.ip }}</p>
+        <template v-else>
+          <div v-for="(nsPods, nsName) in podsByNamespace" :key="nsName" class="space-y-3">
+            <div class="flex items-center gap-3">
+              <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em]">
+                {{ nsName }}
+              </h3>
+              <div class="h-px flex-1 bg-slate-800/40"></div>
+              <span class="text-[9px] text-slate-600 font-mono">
+                {{ nsPods.length }} pod{{ nsPods.length > 1 ? 's' : '' }}
+              </span>
+            </div>
+
+            <div class="space-y-2">
+              <div
+                v-for="pod in nsPods"
+                :key="pod.id"
+                class="border border-slate-800/60 rounded-sm overflow-hidden"
+              >
+                <div
+                  @click="toggleAccordion(pod.id)"
+                  class="bg-[#111217] p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#15171e] transition-colors"
+                >
+                  <div class="min-w-0 flex items-center gap-3">
+                    <div
+                      :class="isVulnerable(pod)
+                        ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                        : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'"
+                      class="w-1.5 h-1.5 rounded-full shrink-0"
+                    ></div>
+
+                    <div class="min-w-0">
+                      <p class="text-[10px] font-bold text-white uppercase truncate">
+                        {{ pod.name }}
+                      </p>
+                      <p class="text-[9px] text-slate-500 font-mono truncate">
+                        {{ pod.role || 'unknown-role' }}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p class="text-slate-500 uppercase font-bold mb-1">Status</p>
-                    <p :class="pod.status === 'Running' ? 'text-green-500' : 'text-yellow-500'">{{ pod.status }}</p>
+
+                  <div class="flex items-center gap-3 shrink-0">
+                    <span
+                      :class="isVulnerable(pod)
+                        ? 'text-red-400 border-red-500/40 bg-red-500/10'
+                        : 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'"
+                      class="px-2 py-1 rounded-sm border text-[8px] font-black uppercase tracking-[0.2em]"
+                    >
+                      {{ isVulnerable(pod) ? 'Vulnerable' : 'Hardened' }}
+                    </span>
+
+                    <span class="text-slate-500 text-[12px] leading-none">
+                      {{ activeAccordion === pod.id ? '−' : '+' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  v-if="activeAccordion === pod.id"
+                  class="bg-[#0b0c10] p-4 border-t border-slate-800/40 space-y-4"
+                >
+                  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-[9px]">
+                    <div>
+                      <p class="text-slate-500 uppercase font-bold mb-1">Pod Name</p>
+                      <p class="text-white font-mono break-all">{{ pod.name }}</p>
+                    </div>
+
+                    <div>
+                      <p class="text-slate-500 uppercase font-bold mb-1">Namespace</p>
+                      <p class="text-blue-400 font-mono">{{ pod.namespace }}</p>
+                    </div>
+
+                    <div>
+                      <p class="text-slate-500 uppercase font-bold mb-1">IP Address</p>
+                      <p class="text-cyan-400 font-mono">{{ pod.ip }}</p>
+                    </div>
+
+                    <div>
+                      <p class="text-slate-500 uppercase font-bold mb-1">Runtime Status</p>
+                      <p
+                        :class="pod.status === 'Running' ? 'text-emerald-400' : 'text-amber-400'"
+                        class="font-bold"
+                      >
+                        {{ pod.status }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-[9px]">
+                    <div>
+                      <p class="text-slate-500 uppercase font-bold mb-1">Role</p>
+                      <p class="text-white">{{ pod.role || 'N/A' }}</p>
+                    </div>
+
+                    <div>
+                      <p class="text-slate-500 uppercase font-bold mb-1">Protection State</p>
+                      <p :class="pod.is_hardened ? 'text-emerald-400' : 'text-red-400'" class="font-bold">
+                        {{ pod.is_hardened ? 'Sentinel Hardened' : 'Not Hardened' }}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p class="text-slate-500 uppercase font-bold mb-1">Labels</p>
+                      <p class="text-slate-300">
+                        {{ Object.keys(pod.labels || {}).length }} detected
+                      </p>
+                    </div>
+                  </div>
+
+                  <div v-if="pod.labels && Object.keys(pod.labels).length > 0" class="space-y-2">
+                    <p class="text-slate-500 uppercase font-bold text-[9px]">Kubernetes Labels</p>
+                    <div class="flex flex-wrap gap-2">
+                      <span
+                        v-for="(value, key) in pod.labels"
+                        :key="`${pod.id}-${key}`"
+                        class="px-2 py-1 rounded-sm border border-slate-700 bg-[#111217] text-[8px] font-mono text-slate-300"
+                      >
+                        {{ key }}={{ value }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="pt-2">
+                    <button
+                      @click="openRoleDetails(pod)"
+                      class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-sm text-[9px] font-bold uppercase tracking-[0.2em] transition-all"
+                    >
+                      Inspect Role Details
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </template>
+      </div>
+
+      <!-- Role modal -->
+      <div
+        v-if="showRoleModal && selectedPod"
+        class="fixed inset-0 z-50 bg-black/70 backdrop-blur-[2px] flex items-center justify-center p-4"
+        @click.self="showRoleModal = false"
+      >
+        <div class="w-full max-w-3xl bg-[#0b0c10] border border-slate-800 rounded-sm overflow-hidden shadow-2xl">
+          <div class="px-5 py-4 border-b border-slate-800 bg-[#111217] flex items-start justify-between gap-4">
+            <div>
+              <p class="text-[8px] text-slate-500 uppercase tracking-[0.3em] font-bold mb-1">
+                Sentinel Pod Inspection
+              </p>
+              <h3 class="text-sm font-black text-white uppercase tracking-[0.15em]">
+                {{ selectedPod.name }}
+              </h3>
+              <p class="text-[10px] text-slate-500 font-mono mt-1">
+                {{ selectedPod.namespace }} • {{ selectedPod.ip }}
+              </p>
+            </div>
+
+            <button
+              @click="showRoleModal = false"
+              class="text-slate-500 hover:text-white text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="p-5 space-y-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div class="bg-[#111217] border border-slate-800 rounded-sm p-3">
+                <p class="text-[8px] text-slate-500 uppercase font-bold mb-1">Role</p>
+                <p class="text-white font-bold break-words">{{ selectedPod.role || 'N/A' }}</p>
+              </div>
+
+              <div class="bg-[#111217] border border-slate-800 rounded-sm p-3">
+                <p class="text-[8px] text-slate-500 uppercase font-bold mb-1">Namespace</p>
+                <p class="text-blue-400 font-mono">{{ selectedPod.namespace }}</p>
+              </div>
+
+              <div class="bg-[#111217] border border-slate-800 rounded-sm p-3">
+                <p class="text-[8px] text-slate-500 uppercase font-bold mb-1">Runtime</p>
+                <p
+                  :class="selectedPod.status === 'Running' ? 'text-emerald-400' : 'text-amber-400'"
+                  class="font-bold"
+                >
+                  {{ selectedPod.status }}
+                </p>
+              </div>
+
+              <div class="bg-[#111217] border border-slate-800 rounded-sm p-3">
+                <p class="text-[8px] text-slate-500 uppercase font-bold mb-1">Sentinel State</p>
+                <p
+                  :class="selectedPod.is_hardened ? 'text-emerald-400' : 'text-red-400'"
+                  class="font-bold"
+                >
+                  {{ selectedPod.is_hardened ? 'Hardened' : 'Vulnerable' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="bg-[#111217] border border-slate-800 rounded-sm p-4 space-y-3">
+              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-[0.2em]">
+                Identity
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px]">
+                <div>
+                  <p class="text-slate-500 uppercase font-bold mb-1">Pod ID</p>
+                  <p class="text-slate-300 font-mono break-all">{{ selectedPod.id }}</p>
+                </div>
+
+                <div>
+                  <p class="text-slate-500 uppercase font-bold mb-1">Pod IP</p>
+                  <p class="text-cyan-400 font-mono">{{ selectedPod.ip }}</p>
+                </div>
+
+                <div class="md:col-span-2">
+                  <p class="text-slate-500 uppercase font-bold mb-1">Image</p>
+                  <p class="text-slate-300 font-mono break-all">
+                    {{ selectedPod.image || 'N/A' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-[#111217] border border-slate-800 rounded-sm p-4 space-y-3">
+              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-[0.2em]">
+                Kubernetes Labels
+              </p>
+
+              <div
+                v-if="selectedPod.labels && Object.keys(selectedPod.labels).length > 0"
+                class="flex flex-wrap gap-2"
+              >
+                <span
+                  v-for="(value, key) in selectedPod.labels"
+                  :key="`modal-${key}`"
+                  class="px-2 py-1 rounded-sm border border-slate-700 bg-[#0b0c10] text-[8px] font-mono text-slate-300"
+                >
+                  {{ key }}={{ value }}
+                </span>
+              </div>
+
+              <p v-else class="text-[10px] text-slate-500">
+                No Kubernetes labels available for this pod.
+              </p>
+            </div>
+
+            <div class="flex justify-end">
+              <button
+                @click="showRoleModal = false"
+                class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-4 py-2 rounded-sm text-[9px] font-bold uppercase tracking-[0.2em] transition-all"
+              >
+                Close Inspection
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
   </template>
 
   <style scoped>
