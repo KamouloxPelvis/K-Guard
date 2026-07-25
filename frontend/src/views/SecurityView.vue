@@ -33,13 +33,17 @@
     try {
       const response = await api.get('/security/alerts');
       
-      alerts.value = response.data.map((hit: any) => ({
-        id: hit._id,
-        source: hit._source.container?.name || 'unknown',
-        severity: hit._source.priority || 'INFO',
-        message: hit._source.output || 'No description available',
-        created_at: hit._source['@timestamp']
-      }));
+      alerts.value = response.data.map((hit: any, index: number) => {
+      const src = hit?._source || {}
+
+      return {
+        id: hit?._id || `alert-${index}`,
+        source: src.container?.name || src.k8s_ns_name || src.host || 'unknown',
+        severity: src.priority || src.rule || 'INFO',
+        message: src.output || src.markdown || 'No description available',
+        created_at: src['@timestamp'] || ''
+      }
+    })
     } catch (error) {
       console.error("[K-Guard] Alert Fetch Error:", error);
     } finally {
