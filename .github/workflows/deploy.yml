@@ -4,10 +4,14 @@ on:
   push:
     branches:
       - main
-      - feat/*
+      - feat/**
 
 permissions:
   contents: read
+
+concurrency:
+  group: k-guard-deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   security_scan:
@@ -15,15 +19,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
+
       - name: Install Bandit
         run: pip install bandit
+
       - name: Run Bandit Scan
         continue-on-error: true
         run: bandit -r . -c bandit.yaml -ll -f html -o security_report.html
+
       - name: Upload Report
         uses: actions/upload-artifact@v4
         with:
@@ -39,12 +47,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push K-Guard image
         uses: docker/build-push-action@v5
         with:
@@ -61,40 +71,53 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Deploy Application
         env:
           KUBECONFIG: ${{ github.workspace }}/kubeconfig.yaml
+          IMAGE: ghcr.io/kamouloxpelvis/kguard-app:${{ github.sha }}
         run: |
-          # 1. Setup Kubeconfig
+          set -euo pipefail
+
           cp /etc/rancher/k3s/k3s.yaml "$KUBECONFIG"
           chmod 600 "$KUBECONFIG"
-          
-          # 2. Determine target environment variables
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            TARGET_NS="k-guard"
-            DEPLOY_NAME="kguard-deployment"
-          else
-            TARGET_NS="k-guard"
-            DEPLOY_NAME="kguard-deployment"
-          fi
-          
-          # Debugging (optional, useful for first runs)
-          echo "Deploying to namespace: $TARGET_NS with deployment name: $DEPLOY_NAME"
-          
-          # 3. Update Kubernetes image
-          # Using the variables defined just above in this shell session
-          kubectl set image deployment/"$DEPLOY_NAME" kguard-app=ghcr.io/kamouloxpelvis/kguard-app:${{ github.sha }} -n "$TARGET_NS"
-          
-          # 4. Verify deployment rollout
-          kubectl rollout status deployment/"$DEPLOY_NAME" -n "$TARGET_NS" --timeout=300s
+
+          TARGET_NS="k-guard"
+          DEPLOY_NAME="kguard-deployment"
+          CONTAINER_NAME="kguard-app"
+
+          echo "Deploying image: $IMAGE"
+          echo "Namespace: $TARGET_NS"
+          echo "Deployment: $DEPLOY_NAME"
+          echo "Container: $CONTAINER_NAME"
+
+          kubectl set image deployment/"$DEPLOY_NAME" \
+            "$CONTAINER_NAME"="$IMAGE" \
+            -n "$TARGET_NS"
+
+          kubectl rollout status deployment/"$DEPLOY_NAME" \
+            -n "$TARGET_NS" \
+            --timeout=300s
+
+          echo "Current deployed image:"
+          kubectl get deployment "$DEPLOY_NAME" -n "$TARGET_NS" \
+            -o jsonpath='{.spec.template.spec.containers[*].image}'
+          echo
 
       - name: Discord Notification
         if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            MESSAGE="🛡️ **K-GUARD**: Deployment successful! SHA ${{ github.sha }} is live. ✅"
+          set -euo pipefail
+
+          if [ "${{ job.status }}" = "success" ]; then
+            MESSAGE="🛡️ K-GUARD: Deployment successful - SHA ${{ github.sha }} is live."
           else
-            MESSAGE="⚠️ **K-GUARD**: Critical deployment failure on SHA ${{ github.sha }}! ❌"
+            MESSAGE="⚠️ K-GUARD: Deployment failure - SHA ${{ github.sha }}."
           fi
-          curl -X POST -H "Content-Type: application/json" -d "{\"content\": \"$MESSAGE\"}" ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"content\":\"$MESSAGE\"}" \
+            "$DISCORD_WEBHOOK_URL"
