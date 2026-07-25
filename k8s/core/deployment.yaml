@@ -41,6 +41,12 @@ spec:
             items:
               - key: ca.pem
                 path: ca.pem
+        - name: wazuh-indexer-ca
+          secret:
+            secretName: wazuh-indexer-certs
+            items:
+              - key: root-ca.pem
+                path: root-ca.pem
       containers:
         - name: kguard-app
           image: ghcr.io/kamouloxpelvis/kguard-app:v1.5.0
@@ -77,32 +83,61 @@ spec:
             - name: wazuh-api-ca
               mountPath: /etc/kguard/wazuh-api-ca
               readOnly: true
+            - name: wazuh-indexer-ca
+              mountPath: /etc/kguard/wazuh-indexer-ca
+              readOnly: true
           env:
             - name: K8S_MODE
               value: "in-cluster"
+
             - name: DB_DIR
               value: "/app/data"
+
             - name: ELASTICSEARCH_URL
               value: "http://elasticsearch-es-http.k-guard.svc.cluster.local:9200"
+
             - name: ELASTICSEARCH_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-es-elastic-user
                   key: elastic
+
             - name: WAZUH_API_URL
               value: "https://wazuh-manager-service.k-guard.svc.cluster.local:55000"
+
             - name: WAZUH_API_CA_FILE
               value: "/etc/kguard/wazuh-api-ca/ca.pem"
+
             - name: WAZUH_API_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: wazuh-manager-credentials
                   key: api-username
+
             - name: WAZUH_API_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: wazuh-manager-credentials
                   key: api-password
+
+            - name: WAZUH_INDEXER_URL
+              value: "https://wazuh-indexer.k-guard.svc.cluster.local:9200"
+
+            - name: WAZUH_INDEXER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-dashboard-credentials
+                  key: indexer-username
+
+            - name: WAZUH_INDEXER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-dashboard-credentials
+                  key: indexer-password
+
+            - name: WAZUH_INDEXER_CA_FILE
+              value: "/etc/kguard/wazuh-indexer-ca/root-ca.pem"
+
           envFrom:
             - secretRef:
                 name: k-guard-secrets
