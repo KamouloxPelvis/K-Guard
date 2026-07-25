@@ -1,6 +1,6 @@
 # K-Guard
 
-**Current release:** `v1.5.0` — Wazuh Endpoint & Compliance
+**Current release:** `v1.6.0` — Wazuh Security Posture & Alerts
 
 > Security governance and observability platform for K3s clusters.
 

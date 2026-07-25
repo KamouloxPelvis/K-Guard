@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-07-25
+
+### Added
+- **Wazuh Security Alerts**: Added a dedicated read-only dashboard page for Wazuh alert visibility inside K-Guard.
+- **Wazuh Security Posture**: Added a new posture-oriented view to expose Wazuh security context beyond endpoint inventory.
+- **Wazuh Alert APIs**: Added backend routes for Wazuh alert retrieval and overview aggregation.
+- **Frontend Navigation**: Added dashboard navigation entries for the new Wazuh security views.
+- **Release Documentation**: Added README and release-level documentation updates for the new Wazuh security capabilities.
+
+### Changed
+- **Application Version**: Bumped K-Guard version from `1.5.0` to `1.6.0`.
+- **Wazuh Coverage**: Expanded the Wazuh integration from endpoint inventory and compliance visibility to include security alerts and posture-oriented views.
+- **Operational Visibility**: Improved the security monitoring experience by surfacing Wazuh-derived security data directly in the K-Guard interface.
+
+### Security
+- Preserved the backend-only Wazuh access model: browser clients still do not communicate directly with the Wazuh Manager API.
+- Preserved the read-only scope of the Wazuh integration for alert and posture visualization.
+- Continued strict separation of Wazuh credentials and tokens from the frontend runtime.
+
+### Validation
+- Verified successful access to `GET /api/wazuh/alerts`.
+- Verified successful access to `GET /api/wazuh/overview`.
+- Verified successful rendering of the new Wazuh security views in the K-Guard dashboard.
+- Verified successful build, deployment, and K3s rollout for the `v1.6.0` release candidate.
+
 ## [1.5.0] - 2026-07-20
 
 ### Added
