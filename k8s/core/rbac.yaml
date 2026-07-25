@@ -1,64 +1,135 @@
-# 1. ServiceAccount pour K-Guard
+# 1. ServiceAccount used by the K-Guard backend.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: k-guard-sa
   namespace: k-guard
+
 ---
-# 2. ClusterRole : Observabilité et accès aux ressources du cluster
+# 2. Cluster-wide, read-only observability permissions.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: k-guard-cluster-role
+  labels:
+    app.kubernetes.io/name: k-guard
+    app.kubernetes.io/component: backend
 rules:
+  # Core Kubernetes resources used by cluster status, capacity and logs.
   - apiGroups: [""]
-    resources: ["pods", "services", "endpoints", "nodes", "events", "namespaces"]
-    verbs: ["get", "list", "watch"]
+    resources:
+      - pods
+      - services
+      - endpoints
+      - nodes
+      - events
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Pod logs are retrieved on demand from the K-Guard interface.
   - apiGroups: [""]
-    resources: ["pods/log"]
-    verbs: ["get", "list"]
+    resources:
+      - pods/log
+    verbs:
+      - get
+
+  # Workload resources used by deployments/all and topology views.
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - replicasets
+      - statefulsets
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Metrics Server API used by /api/k3s/metrics/{namespace}.
+  - apiGroups: ["metrics.k8s.io"]
+    resources:
+      - pods
+      - nodes
+    verbs:
+      - get
+      - list
+
+  # Network Sentinel read-only policy visibility.
   - apiGroups: ["networking.k8s.io"]
-    resources: ["networkpolicies"]
-    verbs: ["get", "list", "watch"]
+    resources:
+      - networkpolicies
+    verbs:
+      - get
+      - list
+      - watch
+
 ---
-# 3. Role : Administration locale pour l'interface backend (ConfigMap, Secret, DaemonSet)
+# 3. Namespace-scoped backend administration.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: k-guard-backend-admin
   namespace: k-guard
+  labels:
+    app.kubernetes.io/name: k-guard
+    app.kubernetes.io/component: backend
 rules:
   - apiGroups: [""]
-    resources: ["secrets", "configmaps"]
-    verbs: ["get", "patch", "update", "list"]
+    resources:
+      - secrets
+      - configmaps
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+
   - apiGroups: ["apps"]
-    resources: ["daemonsets"]
-    verbs: ["get", "patch", "update"]
+    resources:
+      - deployments
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+
 ---
-# 4. Bindings
+# 4. Bind the cluster-level observer role to K-Guard.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: k-guard-cluster-rb
+  labels:
+    app.kubernetes.io/name: k-guard
+    app.kubernetes.io/component: backend
 subjects:
   - kind: ServiceAccount
     name: k-guard-sa
     namespace: k-guard
 roleRef:
+  apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: k-guard-cluster-role
-  apiGroup: rbac.authorization.k8s.io
+
 ---
+# 5. Bind namespace-local administrative permissions to K-Guard.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: k-guard-backend-binding
   namespace: k-guard
+  labels:
+    app.kubernetes.io/name: k-guard
+    app.kubernetes.io/component: backend
 subjects:
   - kind: ServiceAccount
     name: k-guard-sa
     namespace: k-guard
 roleRef:
+  apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: k-guard-backend-admin
-  apiGroup: rbac.authorization.k8s.io
