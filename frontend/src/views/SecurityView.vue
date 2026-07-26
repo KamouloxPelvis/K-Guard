@@ -31,21 +31,24 @@
    */
   const fetchAlerts = async () => {
     try {
-      const response = await api.get('/security/alerts');
-      
-      alerts.value = response.data.map((hit: any, index: number) => {
-      const src = hit?._source || {}
+      const response = await api.get('/wazuh/alerts?limit=50');
 
-      return {
-        id: hit?._id || `alert-${index}`,
-        source: src.container?.name || src.k8s_ns_name || src.host || 'unknown',
-        severity: src.priority || src.rule || 'INFO',
-        message: src.output || src.markdown || 'No description available',
-        created_at: src['@timestamp'] || ''
-      }
-    })
+      const rawAlerts = Array.isArray(response.data?.alerts)
+        ? response.data.alerts
+        : Array.isArray(response.data)
+        ? response.data
+        : [];
+
+      alerts.value = rawAlerts.map((alert: any, index: number) => ({
+        id: alert.id || `alert-${index}`,
+        source: alert.agent?.name || alert.agent?.ip || alert.location || 'unknown',
+        severity: `L${alert.level ?? '0'}`,
+        message: alert.description || 'No description available',
+        created_at: alert.timestamp || ''
+      }));
     } catch (error) {
-      console.error("[K-Guard] Alert Fetch Error:", error);
+      console.error("[K-Guard] Wazuh Alert Fetch Error:", error);
+      alerts.value = [];
     } finally {
       isLoading.value = false;
     }
