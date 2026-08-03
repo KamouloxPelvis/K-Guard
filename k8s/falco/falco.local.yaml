@@ -1,7 +1,16 @@
 json_output: true
 json_include_output_property: true
+
 outputs:
   file:
     enabled: true
     keepAlive: true
     filename: /var/log/falco/alerts.json
+
+http_output:
+  enabled: true
+  url: "http://kguard-ai.k-guard.svc:8080/api/v1/ingest/normalized"
+  user_agent: falcosecurity/falco
+  # optionnel :
+  # keep_alive: true
+  # compress_uploads: false

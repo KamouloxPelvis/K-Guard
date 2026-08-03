@@ -192,19 +192,115 @@ const fetchData = async (silent = false) => {
 
   errorMessage.value = ''
 
+  const emptyOverview: WazuhOverview = {
+    connected: false,
+    inventory: {
+      connected: false,
+      summary: {
+        total: 0,
+        active: 0,
+        disconnected: 0,
+        never_connected: 0,
+      },
+      agents: [],
+    },
+    alerts: {
+      available: false,
+      total: 0,
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+    },
+    posture: {
+      sca_available: false,
+      vulnerabilities_available: false,
+      message: 'Wazuh posture data is temporarily unavailable.',
+    },
+  }
+
   try {
-    const [overviewResponse, alertsResponse] = await Promise.all([
+    const [overviewResult, alertsResult] = await Promise.allSettled([
       api.get<WazuhOverview>('/wazuh/overview'),
       api.get<WazuhAlertResponse>('/wazuh/alerts?limit=50'),
     ])
 
-    overview.value = overviewResponse.data
-    alerts.value = alertsResponse.data.alerts
+    let nextOverview: WazuhOverview = overview.value ?? emptyOverview
+    let nextAlerts: WazuhAlert[] = alerts.value ?? []
+    const issues: string[] = []
+
+    if (overviewResult.status === 'fulfilled') {
+      nextOverview = overviewResult.value.data
+    } else {
+      issues.push('overview')
+    }
+
+    if (alertsResult.status === 'fulfilled') {
+      nextAlerts = Array.isArray(alertsResult.value.data?.alerts)
+        ? alertsResult.value.data.alerts
+        : []
+
+      if (overviewResult.status !== 'fulfilled') {
+        const total = nextAlerts.length
+        const critical = nextAlerts.filter((a) => a.level >= 15).length
+        const high = nextAlerts.filter((a) => a.level >= 12 && a.level <= 14).length
+        const medium = nextAlerts.filter((a) => a.level >= 7 && a.level <= 11).length
+        const low = nextAlerts.filter((a) => a.level <= 6).length
+
+        nextOverview = {
+          ...emptyOverview,
+          alerts: {
+            available: true,
+            total,
+            critical,
+            high,
+            medium,
+            low,
+          },
+          posture: {
+            ...emptyOverview.posture,
+            message: 'Inventory unavailable, alert stream still available from Wazuh.',
+          },
+        }
+      } else {
+        nextOverview = {
+          ...nextOverview,
+          alerts: {
+            ...nextOverview.alerts,
+            available: true,
+            total: nextOverview.alerts.total || nextAlerts.length,
+          },
+        }
+      }
+    } else {
+      issues.push('alerts')
+      nextAlerts = []
+      nextOverview = {
+        ...nextOverview,
+        alerts: {
+          ...nextOverview.alerts,
+          available: false,
+          total: 0,
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
+        },
+      }
+    }
+
+    overview.value = nextOverview
+    alerts.value = nextAlerts
     refreshedAt.value = new Date().toLocaleTimeString('fr-FR')
-  } catch (error: any) {
-    errorMessage.value =
-      error?.response?.data?.detail ||
-      'Wazuh security data is temporarily unavailable.'
+
+    if (issues.length === 2) {
+      errorMessage.value = 'Wazuh security data is temporarily unavailable.'
+    } else if (issues.length === 1) {
+      errorMessage.value =
+        issues[0] === 'overview'
+          ? 'Partial Wazuh degradation: endpoint inventory is unavailable, but alerts remain visible.'
+          : 'Partial Wazuh degradation: alert stream is unavailable, but inventory remains visible.'
+    }
   } finally {
     loading.value = false
     refreshing.value = false
@@ -273,13 +369,22 @@ onUnmounted(() => {
       </div>
     </header>
 
+    <div
+      v-if="errorMessage && overview"
+      class="mb-4 max-w-7xl mx-auto border border-amber-900/40 bg-amber-950/20 p-4 rounded-sm"
+    >
+      <h3 class="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-400">
+        Wazuh degraded mode
+      </h3>
+      <p class="mt-2 text-[10px] text-slate-400 font-mono">{{ errorMessage }}</p>
+    </div>
+
     <div v-if="loading && !overview" class="flex flex-col items-center justify-center py-24">
       <div class="w-8 h-8 border-2 border-[#f05a28] border-t-transparent rounded-full animate-spin mb-4"></div>
       <span class="text-[8px] uppercase tracking-[0.4em] text-[#f05a28]">Synchronizing Wazuh security data...</span>
     </div>
 
-    <div v-else-if="errorMessage" class="max-w-6xl mx-auto border border-red-900/40 bg-red-950/20 p-5 rounded-sm">
-      <h3 class="text-xs font-bold uppercase tracking-[0.18em] text-red-400">Wazuh integration unavailable</h3>
+    <div v-else-if="errorMessage && !overview" class="max-w-6xl mx-auto border border-red-900/40 bg-red-950/20 p-5 rounded-sm">      <h3 class="text-xs font-bold uppercase tracking-[0.18em] text-red-400">Wazuh integration unavailable</h3>
       <p class="mt-2 text-[10px] text-slate-400 font-mono">{{ errorMessage }}</p>
       <button
         @click="fetchData()"

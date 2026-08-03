@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"StatefulSet","metadata":{"annotations":{},"name":"wazuh-indexer","namespace":"k-guard"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"wazuh-indexer"}},"serviceName":"wazuh-indexer","template":{"metadata":{"labels":{"app":"wazuh-indexer"}},"spec":{"containers":[{"env":[{"name":"discovery.type","value":"single-node"},{"name":"OPENSEARCH_INITIAL_ADMIN_PASSWORD","valueFrom":{"secretKeyRef":{"key":"admin-password","name":"wazuh-indexer-credentials"}}}],"image":"wazuh/wazuh-indexer:4.14.6","name":"wazuh-indexer","ports":[{"containerPort":9200,"name":"https"},{"containerPort":9300,"name":"transport"}],"volumeMounts":[{"mountPath":"/var/lib/wazuh-indexer","name":"indexer-data"},{"mountPath":"/usr/share/wazuh-indexer/config/opensearch.yml","name":"indexer-config","readOnly":true,"subPath":"opensearch.yml"},{"mountPath":"/usr/share/wazuh-indexer/config/certs","name":"indexer-certs","readOnly":true}]}],"securityContext":{"fsGroup":1000,"fsGroupChangePolicy":"OnRootMismatch"},"volumes":[{"configMap":{"name":"wazuh-indexer-config"},"name":"indexer-config"},{"name":"indexer-certs","secret":{"secretName":"wazuh-certs"}}]}},"volumeClaimTemplates":[{"metadata":{"name":"indexer-data"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"20Gi"}},"storageClassName":"local-path"}}]}}
+  creationTimestamp: "2026-07-21T17:43:12Z"
+  generation: 5
+  name: wazuh-indexer
+  namespace: k-guard
+  resourceVersion: "13520828"
+  uid: 0643bc82-7a52-4ede-a30f-871184e16ffe
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: wazuh-indexer
+  serviceName: wazuh-indexer
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2026-08-02T19:20:47Z"
+      labels:
+        app: wazuh-indexer
+    spec:
+      containers:
+      - env:
+        - name: discovery.type
+          value: single-node
+        - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: admin-password
+              name: wazuh-indexer-credentials
+        image: wazuh/wazuh-indexer:4.14.6
+        imagePullPolicy: IfNotPresent
+        name: wazuh-indexer
+        ports:
+        - containerPort: 9200
+          name: https
+          protocol: TCP
+        - containerPort: 9300
+          name: transport
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/wazuh-indexer
+          name: indexer-data
+        - mountPath: /usr/share/wazuh-indexer/config/opensearch.yml
+          name: indexer-config
+          readOnly: true
+          subPath: opensearch.yml
+        - mountPath: /usr/share/wazuh-indexer/config/certs
+          name: indexer-certs
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: wazuh-indexer-config
+        name: indexer-config
+      - name: indexer-certs
+        secret:
+          defaultMode: 420
+          secretName: wazuh-certs
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: indexer-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 20Gi
+      storageClassName: local-path
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+status:
+  availableReplicas: 1
+  collisionCount: 0
+  currentReplicas: 1
+  currentRevision: wazuh-indexer-c7cd9d5b
+  observedGeneration: 5
+  readyReplicas: 1
+  replicas: 1
+  updateRevision: wazuh-indexer-c7cd9d5b
+  updatedReplicas: 1
