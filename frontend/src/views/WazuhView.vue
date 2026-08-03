@@ -87,7 +87,6 @@ const endpointSearch = ref('')
 const alertSearch = ref('')
 const levelFilter = ref('all')
 const refreshedAt = ref('')
-const wazuhDashboardUrl = ref('')
 let refreshTimer: number | undefined
 
 const inventory = computed(() => overview.value?.inventory ?? null)
@@ -307,20 +306,8 @@ const fetchData = async (silent = false) => {
   }
 }
 
-async function loadWazuhDashboardUrl() {
-  try {
-    const response = await api.get<{ url: string }>('/wazuh/dashboard-url')
-    wazuhDashboardUrl.value =
-      typeof response.data.url === 'string' ? response.data.url.trim() : ''
-  } catch (error) {
-    console.error('Unable to load Wazuh dashboard URL', error)
-    wazuhDashboardUrl.value = ''
-  }
-}
-
 onMounted(async () => {
   await fetchData()
-  await loadWazuhDashboardUrl()
   refreshTimer = window.setInterval(() => fetchData(true), 60_000)
 })
 
@@ -348,16 +335,6 @@ onUnmounted(() => {
         >
           {{ overview?.connected ? '● Wazuh API + Indexer Connected' : '● Wazuh Status Unknown' }}
         </span>
-
-        <a
-          v-if="wazuhDashboardUrl"
-          :href="wazuhDashboardUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="wazuh-dashboard-link"
-          >
-          Open Wazuh Dashboard ↗
-        </a>
         
         <button
           @click="fetchData(true)"
