@@ -49,7 +49,7 @@ spec:
                 path: root-ca.pem
       containers:
         - name: kguard-app
-          image: ghcr.io/kamouloxpelvis/kguard-app:b39a040b030cc86d18e1523990a8a14d73d61d5f
+          image: ghcr.io/kamouloxpelvis/kguard-app:latest
           imagePullPolicy: Always
           securityContext:
             runAsUser: 1000
