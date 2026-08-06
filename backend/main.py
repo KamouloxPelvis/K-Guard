@@ -77,7 +77,9 @@ async def serve_frontend(rest_of_path: str):
 
     candidate_path = (BASE_STATIC_DIR / requested_path).resolve()
 
-    if not str(candidate_path).startswith(str(BASE_STATIC_DIR)):
+    try:
+        candidate_path.relative_to(BASE_STATIC_DIR)
+    except ValueError:
         return JSONResponse(
             status_code=403,
             content={"error": "Security Violation: Access Denied"},
