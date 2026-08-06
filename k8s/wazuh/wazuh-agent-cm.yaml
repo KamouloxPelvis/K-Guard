@@ -24,7 +24,7 @@ data:
         <crypto_method>aes</crypto_method>
 
         <enrollment>
-          <enabled>yes</enabled>
+          <enabled>no</enabled>
           <manager_address>wazuh-manager-service</manager_address>
           <port>1515</port>
           <agent_name>k8s-devopsnotes</agent_name>

@@ -93,31 +93,42 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full overflow-hidden">
-    <header class="flex-none border-b border-slate-800 pb-4 px-4">
-      <div class="flex justify-between items-end">
-        <div>
-          <p class="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Real-time Falco & ELK Monitoring</p>
-        </div>
+  <div class="p-4 lg:p-6 relative z-10 font-sans h-full overflow-y-auto custom-scrollbar">
+    <header class="max-w-7xl mx-auto w-full mb-5 flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-slate-800/40 pb-3">
+      <div>
+        <p class="text-[10px] text-slate-500 mt-2 uppercase tracking-[0.35em]">
+          Runtime Security
+        </p>
 
-        <nav class="flex gap-6">
-          <button @click="activeTab = 'dashboard'" 
-                  :class="activeTab === 'dashboard' ? 'text-white border-b border-red-500' : 'text-slate-500'"
-                  class="text-[10px] uppercase font-bold tracking-widest pb-1 transition-all">
-            Dashboard
-          </button>
-          <button @click="activeTab = 'alerts'" 
-                  :class="activeTab === 'alerts' ? 'text-white border-b border-red-500' : 'text-slate-500'"
-                  class="text-[10px] uppercase font-bold tracking-widest pb-1 transition-all">
-            Live Feed
-          </button>
-        </nav>
+        <p class="text-[8px] text-slate-600 uppercase tracking-widest mt-2">
+          Read-only runtime observability · Falco, Wazuh and K-Guard AI
+        </p>
       </div>
+
+      <nav class="flex gap-6">
+        <button
+          type="button"
+          @click="activeTab = 'dashboard'"
+          :class="activeTab === 'dashboard' ? 'text-white border-b border-red-500' : 'text-slate-500'"
+          class="text-[10px] uppercase font-bold tracking-widest pb-1 transition-all cursor-pointer"
+        >
+          Dashboard
+        </button>
+
+        <button
+          type="button"
+          @click="activeTab = 'alerts'"
+          :class="activeTab === 'alerts' ? 'text-white border-b border-red-500' : 'text-slate-500'"
+          class="text-[10px] uppercase font-bold tracking-widest pb-1 transition-all cursor-pointer"
+        >
+          Live Feed
+        </button>
+      </nav>
     </header>
 
-    <div class="flex-1 overflow-hidden relative">
-      <div v-if="activeTab === 'dashboard'" class="h-full flex flex-col p-4 overflow-y-auto">
-        <div class="flex items-center justify-between mb-4">
+    <main class="max-w-7xl mx-auto w-full flex-1 min-h-0">
+      <div v-if="activeTab === 'dashboard'" class="w-full space-y-4 pb-10">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <select
             v-model="selectedRange"
             class="bg-[#111217] border border-slate-700 text-[9px] px-2 py-1 rounded uppercase font-bold tracking-widest cursor-pointer text-white hover:border-slate-500 transition-colors"
@@ -158,15 +169,74 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <article class="xl:col-span-2 bg-[#111217]/80 border border-slate-800 rounded-sm p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-[8px] text-cyan-400 uppercase font-bold tracking-[0.18em]">
+                  Runtime telemetry
+                </p>
+
+                <h3 class="mt-2 text-[11px] text-slate-200 uppercase font-black tracking-[0.2em]">
+                  Security event context
+                </h3>
+
+                <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
+                  Consolidated runtime events from Falco, Wazuh and Kubernetes telemetry.
+                </p>
+              </div>
+
+              <span class="shrink-0 border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[8px] text-cyan-400 uppercase font-bold">
+                Read only
+              </span>
+            </div>
+
+            <div class="mt-5 min-h-28 border border-slate-800 bg-black/20 p-4">
+              <p class="text-[9px] text-slate-600 uppercase tracking-widest">
+                Runtime correlation layer ready
+              </p>
+
+              <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
+                This area will display correlated events, affected workloads and investigation context.
+              </p>
+            </div>
+          </article>
+
+          <aside class="bg-[#111217]/80 border border-violet-900/30 rounded-sm p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-[8px] text-violet-400 uppercase font-bold tracking-[0.18em]">
+                  K-Guard AI
+                </p>
+
+                <h3 class="mt-2 text-[11px] text-slate-200 uppercase font-black tracking-[0.2em]">
+                  Investigation assistant
+                </h3>
+              </div>
+
+              <span class="shrink-0 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[8px] text-violet-300 uppercase font-bold">
+                Preparing
+              </span>
+            </div>
+
+            <div class="mt-5 min-h-28 border border-violet-900/30 bg-violet-950/10 p-4">
+              <p class="text-[9px] text-violet-300 uppercase tracking-widest">
+                AI enrichment layer
+              </p>
+
+              <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
+                AI-generated summaries, probable impact, MITRE context and investigation recommendations will appear here.
+              </p>
+            </div>
+          </aside>
+        </section>
+
         <div class="bg-[#111217]/80 border border-slate-800 rounded-sm p-5">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="text-[10px] text-slate-300 uppercase font-black tracking-[0.2em]">
                 Alert severity distribution
               </h3>
-              <p class="text-[8px] text-slate-600 uppercase mt-1">
-                Runtime observability snapshot rendered directly by K-Guard
-              </p>
             </div>
           </div>
 
@@ -192,23 +262,46 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-else class="overflow-y-auto h-full">
-        <h2 class="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-2">Live Alert Feed</h2>
-        <div v-for="alert in alerts" :key="alert.id" 
-             class="bg-[#181b1f] border-l-2 border-red-500 p-4 flex justify-between items-center hover:bg-[#1e2329] transition-all">
-          <div>
-            <h3 class="font-mono text-sm font-bold text-white">{{ alert.message }}</h3>
-            <p class="text-[10px] text-slate-500 uppercase">{{ alert.source }} // {{ alert.created_at }}</p>
+      <div v-else class="w-full space-y-3 pb-10">
+        <header class="bg-[#111217]/80 border border-slate-800 rounded-sm p-5">
+          <p class="text-[8px] text-red-400 uppercase font-bold tracking-[0.18em]">
+            Runtime events
+          </p>
+
+          <h2 class="mt-2 text-[11px] text-slate-200 uppercase font-black tracking-[0.2em]">
+            Live Alert Feed
+          </h2>
+
+          <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
+            Read-only runtime events collected from Falco, Wazuh and the K-Guard security pipeline.
+          </p>
+        </header>
+        <section class="space-y-2">
+          <div
+          v-for="alert in alerts"
+          :key="alert.id"
+          class="bg-[#181b1f] border-l-2 border-red-500 p-4 flex justify-between items-start gap-4 hover:bg-[#1e2329] transition-all"
+        >
+          <div class="min-w-0 flex-1">
+            <h3 class="break-words font-mono text-sm font-bold text-white leading-snug">
+              {{ alert.message }}
+            </h3>
+
+            <p class="mt-1 break-words text-[10px] text-slate-500 uppercase">
+              {{ alert.source }} // {{ alert.created_at }}
+            </p>
           </div>
-          <span class="text-[9px] font-bold px-2 py-1 bg-red-900/20 text-red-500 border border-red-500/30">
+
+          <span class="shrink-0 text-[9px] font-bold px-2 py-1 bg-red-900/20 text-red-500 border border-red-500/30">
             {{ alert.severity }}
           </span>
         </div>
+      </section>
         
         <div v-if="!isLoading && alerts.length === 0" class="p-10 text-center text-slate-600 italic">
           System Secure. No active threats detected.
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>

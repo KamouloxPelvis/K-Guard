@@ -89,7 +89,7 @@
   const pageTitle = computed(() => {
     const titles: Record<string, string> = {
       '/': 'System Overview',
-      '/security': 'Runtime Observability & Security',
+      '/security': 'Runtime Security',
       '/wazuh': 'Endpoint & Compliance',
       '/sentinel': 'Network Sentinel',
       '/settings': 'Settings'

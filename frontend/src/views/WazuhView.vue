@@ -606,11 +606,25 @@ onUnmounted(() => {
     <div v-if="selectedAgent" class="fixed inset-0 z-50 bg-black/70 flex justify-end" @click.self="selectedAgent = null">
       <aside class="h-full w-full max-w-md bg-[#111217] border-l border-slate-700 shadow-2xl p-6 overflow-y-auto">
         <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
-          <div>
-            <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.2em]">Endpoint detail</p>
-            <h3 class="mt-2 text-lg text-white font-semibold">{{ selectedAgent.name }}</h3>
+          <div class="min-w-0 flex-1">
+            <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.2em]">
+              Endpoint detail
+            </p>
+
+            <h3 class="mt-2 break-words pr-2 text-lg text-white font-semibold leading-snug">
+              {{ selectedAgent.name }}
+            </h3>
           </div>
-          <button @click="selectedAgent = null" class="text-slate-500 hover:text-white text-xl cursor-pointer">×</button>
+
+          <button
+            type="button"
+            aria-label="Fermer la fenêtre Endpoint detail"
+            title="Fermer"
+            @click="selectedAgent = null"
+            class="shrink-0 inline-flex h-8 w-8 items-center justify-center border border-slate-700 text-lg leading-none text-slate-400 hover:border-cyan-500 hover:bg-cyan-500/10 hover:text-white cursor-pointer transition-colors"
+          >
+            ×
+          </button>
         </div>
 
         <dl class="mt-5 space-y-4 text-[10px]">
@@ -634,12 +648,29 @@ onUnmounted(() => {
     <div v-if="selectedAlert" class="fixed inset-0 z-50 bg-black/70 flex justify-end" @click.self="selectedAlert = null">
       <aside class="h-full w-full max-w-2xl bg-[#111217] border-l border-slate-700 shadow-2xl p-6 overflow-y-auto">
         <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
-          <div>
-            <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.2em]">Alert evidence</p>
-            <h3 class="mt-2 text-lg text-white font-semibold">{{ selectedAlert.description }}</h3>
-            <p class="mt-2 text-[9px] text-slate-500 font-mono">{{ formatDate(selectedAlert.timestamp) }} · {{ selectedAlert.agent.name }}</p>
+          <div class="min-w-0 flex-1">
+            <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.2em]">
+              Alert evidence
+            </p>
+
+            <h3 class="mt-2 break-words pr-2 text-lg text-white font-semibold leading-snug">
+              {{ selectedAlert.description }}
+            </h3>
+
+            <p class="mt-2 break-words text-[9px] text-slate-500 font-mono">
+              {{ formatDate(selectedAlert.timestamp) }} · {{ selectedAlert.agent.name }}
+            </p>
           </div>
-          <button @click="selectedAlert = null" class="text-slate-500 hover:text-white text-xl cursor-pointer">×</button>
+
+          <button
+            type="button"
+            aria-label="Fermer la fenêtre Alert evidence"
+            title="Fermer"
+            @click="selectedAlert = null"
+            class="shrink-0 inline-flex h-8 w-8 items-center justify-center border border-slate-700 text-lg leading-none text-slate-400 hover:border-cyan-500 hover:bg-cyan-500/10 hover:text-white cursor-pointer transition-colors"
+          >
+            ×
+          </button>
         </div>
 
         <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
