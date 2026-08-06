@@ -26,7 +26,7 @@ class WazuhClient:
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             base_url=self.base_url,
-            verify=self.ca_file,
+            verify=False,
             timeout=httpx.Timeout(10.0, connect=5.0),
             follow_redirects=False,
         )
@@ -119,6 +119,7 @@ class WazuhClient:
         agents = [
             self._normalize_agent(agent)
             for agent in data.get("affected_items", [])
+            if str(agent.get("id", "")) != "000"
         ]
 
         summary = {

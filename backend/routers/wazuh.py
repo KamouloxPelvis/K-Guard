@@ -97,9 +97,3 @@ async def get_wazuh_overview():
             ),
         },
     }
-
-@router.get("/dashboard-url")
-async def get_wazuh_dashboard_url():
-    return {
-        "url": os.getenv("WAZUH_DASHBOARD_URL", "").strip()
-    }

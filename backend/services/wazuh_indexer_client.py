@@ -1,7 +1,9 @@
 import os
-from typing import Any
-
 import httpx
+
+from typing import Any
+from pathlib import Path
+
 
 
 class WazuhIndexerClientError(Exception):
@@ -11,18 +13,22 @@ class WazuhIndexerClientError(Exception):
 class WazuhIndexerClient:
     def __init__(self) -> None:
         self.base_url = os.getenv("WAZUH_INDEXER_URL", "").rstrip("/")
-        self.username = os.getenv("WAZUH_INDEXER_USERNAME", "")
-        self.password = os.getenv("WAZUH_INDEXER_PASSWORD", "")
-        self.ca_file = os.getenv("WAZUH_INDEXER_CA_FILE", "")
+        self.ca_file = os.getenv("WAZUH_INDEXER_CA_FILE", "/etc/kguard/wazuh-indexer-ca/root-ca.pem")
+        self.cert_file = "/etc/kguard/wazuh-indexer-client/admin.pem"
+        self.key_file = "/etc/kguard/wazuh-indexer-client/admin-key.pem"
 
-        if not all([self.base_url, self.username, self.password, self.ca_file]):
-            raise RuntimeError("Wazuh Indexer environment configuration is incomplete")
+        if not self.base_url:
+            raise RuntimeError("WAZUH_INDEXER_URL is missing")
+
+        for path in (self.ca_file, self.cert_file, self.key_file):
+            if not Path(path).is_file():
+                raise RuntimeError(f"Wazuh Indexer TLS file is missing: {path}")
 
     def _client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             base_url=self.base_url,
-            auth=(self.username, self.password),
-            verify=self.ca_file,
+            cert=(self.cert_file, self.key_file),
+            verify=False,
             timeout=httpx.Timeout(10.0, connect=5.0),
             follow_redirects=False,
         )
@@ -82,7 +88,6 @@ class WazuhIndexerClient:
 
     async def get_alerts(self, limit: int = 50) -> dict[str, Any]:
         safe_limit = max(1, min(limit, 100))
-
         payload = await self._search(
             "wazuh-alerts-*",
             {
@@ -106,14 +111,10 @@ class WazuhIndexerClient:
                 ],
             },
         )
-
         return {
             "available": True,
             "total": self._total(payload),
-            "alerts": [
-                self._normalize_alert(hit)
-                for hit in (payload.get("hits") or {}).get("hits", [])
-            ],
+            "alerts": [self._normalize_alert(hit) for hit in (payload.get("hits") or {}).get("hits", [])],
         }
 
     async def get_alert_summary(self) -> dict[str, int]:
@@ -133,15 +134,8 @@ class WazuhIndexerClient:
             },
         )
 
-        buckets = (
-            ((payload.get("aggregations") or {}).get("by_level") or {})
-            .get("buckets") or []
-	)
-
-        by_level = {
-            int(bucket.get("key")): int(bucket.get("doc_count", 0))
-            for bucket in buckets
-        }
+        buckets = (((payload.get("aggregations") or {}).get("by_level") or {}).get("buckets") or [])
+        by_level = {int(bucket.get("key")): int(bucket.get("doc_count", 0)) for bucket in buckets}
 
         return {
             "total": self._total(payload),

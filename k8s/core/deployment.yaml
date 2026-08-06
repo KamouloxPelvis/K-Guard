@@ -47,6 +47,9 @@ spec:
             items:
               - key: root-ca.pem
                 path: root-ca.pem
+        - name: wazuh-indexer-client
+          secret:
+            secretName: wazuh-indexer-client
       containers:
         - name: kguard-app
           image: ghcr.io/kamouloxpelvis/kguard-app:latest
@@ -86,6 +89,9 @@ spec:
             - name: wazuh-indexer-ca
               mountPath: /etc/kguard/wazuh-indexer-ca
               readOnly: true
+            - name: wazuh-indexer-client
+              mountPath: /etc/kguard/wazuh-indexer-client
+              readOnly: true
           env:
             - name: K8S_MODE
               value: "in-cluster"
@@ -113,18 +119,6 @@ spec:
 
             - name: WAZUH_INDEXER_URL
               value: "https://wazuh-indexer.k-guard.svc.cluster.local:9200"
-
-            - name: WAZUH_INDEXER_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: wazuh-dashboard-credentials
-                  key: indexer-username
-
-            - name: WAZUH_INDEXER_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: wazuh-dashboard-credentials
-                  key: indexer-password
 
             - name: WAZUH_INDEXER_CA_FILE
               value: "/etc/kguard/wazuh-indexer-ca/root-ca.pem"
