@@ -42,6 +42,12 @@ def _normalize_payload(payload: dict) -> dict:
         "priority": str(priority),
         "output": str(output),
         "raw_payload": json.dumps(payload, ensure_ascii=False),
+        "ai_status": str(payload.get("ai_status") or "pending"),
+        "ai_enrichment": (
+            json.dumps(payload.get("ai_enrichment"), ensure_ascii=False)
+            if payload.get("ai_enrichment") is not None
+            else None
+        ),
     }
 
 
@@ -105,10 +111,11 @@ async def ingest_security_event(request: Request):
                         output,
                         raw_payload,
                         ai_status,
+                        ai_enrichment,
                         created_at,
                         updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         event["event_id"],
@@ -119,6 +126,8 @@ async def ingest_security_event(request: Request):
                         event["priority"],
                         event["output"],
                         event["raw_payload"],
+                        event["ai_status"],
+                        event["ai_enrichment"],
                         now,
                         now,
                     ),
