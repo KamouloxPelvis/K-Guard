@@ -7,7 +7,7 @@ data:
   fluent-bit.conf: |
     [SERVICE]
         Flush             1
-        Log_Level         debug
+        Log_Level         info
         Parsers_File      parsers.conf
         Environment_Variables On
 
@@ -69,7 +69,7 @@ data:
 
     [OUTPUT] # Wazuh (Syslog)
         Name          syslog
-        Match         falco.*
+        Match         falco.webex
         Host          wazuh-manager-service.k-guard.svc.cluster.local
         Port          1514
         Mode          tcp
