@@ -156,7 +156,8 @@ async def ingest_security_event(request: Request):
         "status": "accepted",
         "received": len(payloads),
         "inserted": inserted_count,
-        "event_ids": event_ids,
+        "event_ids": event_ids[:10],
+        "event_ids_truncated": len(event_ids) > 10,
         "ai_status": "pending",
     }
 
