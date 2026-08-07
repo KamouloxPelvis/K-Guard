@@ -67,58 +67,70 @@ async def ingest_security_event(request: Request):
             detail="Invalid JSON payload",
         )
 
-    if not isinstance(payload, dict):
+    if isinstance(payload, dict):
+        payloads = [payload]
+    elif isinstance(payload, list):
+        payloads = payload
+    else:
+        payloads = []
+
+    if not payloads or not all(isinstance(item, dict) for item in payloads):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Security event must be a JSON object",
+            detail="Security event must be a JSON object or an array of objects",
         )
 
-    event = _normalize_payload(payload)
-    now = datetime.now(timezone.utc).isoformat()
     conn = None
+    inserted_count = 0
+    event_ids = []
 
     try:
         conn = sqlite3.connect(database.DB_PATH)
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
-            INSERT INTO security_events (
-                event_id,
-                source,
-                severity,
-                message,
-                rule_name,
-                priority,
-                output,
-                raw_payload,
-                ai_status,
-                created_at,
-                updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
-            """,
-            (
-                event["event_id"],
-                event["source"],
-                event["severity"],
-                event["message"],
-                event["rule_name"],
-                event["priority"],
-                event["output"],
-                event["raw_payload"],
-                now,
-                now,
-            ),
-        )
+        for payload_item in payloads:
+            event = _normalize_payload(payload_item)
+            now = datetime.now(timezone.utc).isoformat()
+
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO security_events (
+                        event_id,
+                        source,
+                        severity,
+                        message,
+                        rule_name,
+                        priority,
+                        output,
+                        raw_payload,
+                        ai_status,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+                    """,
+                    (
+                        event["event_id"],
+                        event["source"],
+                        event["severity"],
+                        event["message"],
+                        event["rule_name"],
+                        event["priority"],
+                        event["output"],
+                        event["raw_payload"],
+                        now,
+                        now,
+                    ),
+                )
+
+                inserted_count += 1
+                event_ids.append(event["event_id"])
+
+            except sqlite3.IntegrityError:
+                continue
 
         conn.commit()
-        inserted = True
-
-    except sqlite3.IntegrityError:
-        if conn:
-            conn.rollback()
-        inserted = False
 
     except Exception:
         if conn:
@@ -135,16 +147,16 @@ async def ingest_security_event(request: Request):
             conn.close()
 
     logger.info(
-        "Falco event persisted: event_id=%s inserted=%s rule=%s",
-        event["event_id"],
-        inserted,
-        event["rule_name"],
+        "Falco batch persisted: received=%s inserted=%s",
+        len(payloads),
+        inserted_count,
     )
 
     return {
         "status": "accepted",
-        "inserted": inserted,
-        "event_id": event["event_id"],
+        "received": len(payloads),
+        "inserted": inserted_count,
+        "event_ids": event_ids,
         "ai_status": "pending",
     }
 
