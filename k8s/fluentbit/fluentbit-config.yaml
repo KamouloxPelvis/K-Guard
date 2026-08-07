@@ -40,17 +40,15 @@ data:
         script            filter.lua
         call              webex_formatter
 
-    [OUTPUT] # ElasticSearch
-        Name              es
+    [OUTPUT] # K-Guard SQLite ingestion
+        Name              http
         Match             falco.*
-        Host              elasticsearch-es-http.k-guard
-        Port              9200
-        Index             falco-alerts
-        HTTP_User         elastic
-        HTTP_Passwd       Li77c5dL9e8X2lio4AW8UD76
-        tls               On
-        tls.verify        Off
-        Suppress_Type_Name On
+        Host              k-guard-service.k-guard.svc.cluster.local
+        Port              8000
+        URI               /api/security/events
+        Header            Content-Type application/json
+        Format            json
+        Retry_Limit       False
 
     [OUTPUT] # Webex stdout
         Name              stdout

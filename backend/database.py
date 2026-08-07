@@ -70,6 +70,26 @@ def init_db():
         )
     ''')
     
+    migrations = {
+        "event_id": "TEXT",
+        "rule_name": "TEXT",
+        "priority": "TEXT",
+        "output": "TEXT",
+        "raw_payload": "TEXT",
+        "ai_status": "TEXT DEFAULT 'pending'",
+        "ai_enrichment": "TEXT",
+        "updated_at": "TIMESTAMP",
+    }
+
+    cursor.execute("PRAGMA table_info(security_events)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+
+    for column_name, column_type in migrations.items():
+        if column_name not in existing_columns:
+            cursor.execute(
+                f"ALTER TABLE security_events ADD COLUMN {column_name} {column_type}"
+            )
+
     cursor.execute("INSERT OR IGNORE INTO integrations (name, enabled) VALUES ('webex', 0)")
     
     conn.commit()
