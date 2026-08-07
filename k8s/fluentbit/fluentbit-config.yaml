@@ -42,7 +42,7 @@ data:
 
     [OUTPUT] # K-Guard SQLite ingestion
         Name              http
-        Match             falco.*
+        Match             falco.webex
         Host              k-guard-service.k-guard.svc.cluster.local
         Port              8000
         URI               /api/security/events
