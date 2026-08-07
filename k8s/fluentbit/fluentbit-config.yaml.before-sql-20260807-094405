@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: k-guard
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush             1
+        Log_Level         debug
+        Parsers_File      parsers.conf
+        Environment_Variables On
+
+    [INPUT]
+        Name              tail
+        Path              /var/log/falco/alerts.json
+        Parser            falco_json
+        Tag               falco.logs
+        DB                /var/log/flb_falco.db
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  5
+        Read_from_Head    On
+        Rotate_Wait       5
+
+    [FILTER]
+        Name              rewrite_tag
+        Match             falco.logs
+        Rule              $priority ^(Warning|Error|Notice)$ falco.webex true
+
+    [FILTER]
+        Name              nest
+        Match             falco.webex
+        Operation         lift
+        Nested_under      log
+
+    [FILTER] # Script Lua
+        Name              lua
+        Match             falco.webex
+        script            filter.lua
+        call              webex_formatter
+
+    [OUTPUT] # ElasticSearch
+        Name              es
+        Match             falco.*
+        Host              elasticsearch-es-http.k-guard
+        Port              9200
+        Index             falco-alerts
+        HTTP_User         elastic
+        HTTP_Passwd       Li77c5dL9e8X2lio4AW8UD76
+        tls               On
+        tls.verify        Off
+        Suppress_Type_Name On
+
+    [OUTPUT] # Webex stdout
+        Name              stdout
+        Match             falco.webex
+
+    [OUTPUT] # Webex HTTP
+        Name              http
+        Match             falco.webex
+        Host              webexapis.com
+        Port              443
+        URI               /v1/messages
+        Header            Authorization Bearer ${WEBEX_TOKEN}
+        Format            json_stream
+        tls               on
+        tls.verify        on
+        Json_date_format  iso8601
+        Retry_Limit       5
+
+    [OUTPUT] # Wazuh (Syslog)
+        Name          syslog
+        Match         falco.*
+        Host          wazuh-manager-service.k-guard.svc.cluster.local
+        Port          1514
+        Mode          tcp
+        Syslog_Format rfc5424
+
+  parsers.conf: |
+    [PARSER]
+        Name              falco_json
+        Format            json
+        Time_Key          time
+        Time_Format       %Y-%m-%dT%H:%M:%S.%L
+
+  filter.lua: |
+    -- filter.lua
+    function webex_formatter(tag, timestamp, record)
+        local p = record["priority"] or "unknown"
+        local r = record["rule"] or "unknown"
+        local alert_text = record["output"] or "Alert detected"
+
+        local new_record = {}
+        -- roomId sera injecté dynamiquement par ton Python via re.sub
+        new_record["roomId"] = "Y2lzY29zcGFyazovL3VybjpURUFNOmV1LWNlbnRyYWwtMV9rL1JPT00vYWE2MjM5MDAtMTczNy0xMWYxLTg4ZDItY2IyY2E0NThhOTU4"
+        new_record["markdown"] = "**K-Guard Alert**\n* Rule: " .. r .. "\n* Priority: " .. p .. "\n* Details: " .. alert_text
+
+        return 1, timestamp, new_record
+    end

@@ -136,8 +136,8 @@
         <router-link to="/security" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/security' ? 'nav-active' : 'nav-inactive'">
           <span class="text-lg">🔒</span>
           <div class="flex flex-col md:hidden lg:flex ml-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest">Runtime Observability & Security</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Falco Detection</span>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Runtime Security</span>
+            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Ollama-Enriched Falco Alerts</span>
           </div>
         </router-link>
 
@@ -150,7 +150,7 @@
           <span class="text-lg">🖥️</span>
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">Endpoint & Compliance</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Wazuh Inventory</span>
+            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Wazuh Endpoint Posture & Security Insights</span>
           </div>
         </router-link>
 
