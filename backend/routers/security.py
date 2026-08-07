@@ -167,7 +167,11 @@ async def ingest_security_event(request: Request):
         "inserted": inserted_count,
         "event_ids": event_ids[:10],
         "event_ids_truncated": len(event_ids) > 10,
-        "ai_status": "pending",
+        "ai_status": (
+            payloads[0].get("ai_status")
+            if len(payloads) == 1
+            else "batch"
+        ),
     }
 
 
