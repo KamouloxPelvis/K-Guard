@@ -137,7 +137,7 @@
           <span class="text-lg">🔒</span>
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">Runtime Security</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Ollama-Enriched Falco Alerts</span>
+            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">AI-Enriched Falco Alerts</span>
           </div>
         </router-link>
 
