@@ -58,24 +58,43 @@ const chartBars = computed(() => {
 
 const fetchAlerts = async () => {
   try {
-    const response = await api.get('/wazuh/alerts?limit=50')
+    const response = await api.get('/security/alerts?limit=50')
 
-    const rawAlerts = Array.isArray(response.data?.alerts)
-      ? response.data.alerts
-      : Array.isArray(response.data)
-        ? response.data
-        : []
+    const rawAlerts = Array.isArray(response.data)
+      ? response.data
+      : []
 
-    alerts.value = rawAlerts.map((alert: any, index: number) => ({
-      id: alert.id || `alert-${index}`,
-      source: alert.agent?.name || alert.agent?.ip || alert.location || 'unknown',
-      severity: `L${alert.level ?? '0'}`,
-      level: Number(alert.level ?? 0),
-      message: alert.description || 'No description available',
-      created_at: alert.timestamp || '',
-    }))
+    const severityLevel = (alert: any): number => {
+      const severity = String(
+        alert.priority || alert.severity || 'info',
+      ).toLowerCase()
+
+      if (['critical', 'emergency', 'alert'].includes(severity)) return 15
+      if (['high', 'error'].includes(severity)) return 12
+      if (['medium', 'warning', 'warn'].includes(severity)) return 7
+      return 3
+    }
+
+    alerts.value = rawAlerts.map((alert: any, index: number) => {
+      const level = severityLevel(alert)
+
+      return {
+        id: alert.event_id || alert.id || `alert-${index}`,
+        source: alert.source || 'unknown',
+        severity: `${String(
+          alert.priority || alert.severity || 'INFO',
+        ).toUpperCase()}`,
+        level,
+        message:
+          alert.rule_name ||
+          alert.message ||
+          alert.output ||
+          'No description available',
+        created_at: alert.created_at || '',
+      }
+    })
   } catch (error) {
-    console.error('[K-Guard] Wazuh Alert Fetch Error:', error)
+    console.error('[K-Guard] Runtime Security Fetch Error:', error)
     alerts.value = []
   } finally {
     isLoading.value = false
