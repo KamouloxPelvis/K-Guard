@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from typing import Dict, Any
 from kubernetes import client, config
+from backend.sentinel_audit import audit_cluster_security
 
 router = APIRouter(tags=["Network Sentinel"])
 
@@ -25,23 +26,25 @@ def load_k8s_config():
 @router.get("/sentinel/status")
 async def get_network_policy_status():
     """
-    Checks if K-Guard Network Policies are currently deployed
-    across the entire cluster using managed labels.
+    Read-only Kubernetes security posture assessment.
+    This endpoint never mutates cluster state.
     """
     try:
-        networking_v1 = client.NetworkingV1Api()
-        netpols = networking_v1.list_network_policy_for_all_namespaces()
-        
-        # Verify if our K-Guard managed policy exists using label selectors
-        is_deployed = any(
-            policy.metadata.labels and policy.metadata.labels.get("managed-by") == "k-guard-sentinel"
-            for policy in netpols.items
+        return await asyncio.to_thread(audit_cluster_security)
+    except Exception as error:
+        logging.error("Error running Sentinel security audit: %s", error)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "deployed": False,
+                "securityScore": 0,
+                "security_score": None,
+                "coverage": 0,
+                "confidence": 0,
+                "error": "Sentinel security audit unavailable",
+            },
         )
-        
-        return {"deployed": is_deployed}
-    except Exception as e:
-        logging.error("Error checking cluster-wide policies: %s", str(e))
-        return {"deployed": False, "error": str(e)}
+
 
 async def fetch_namespace_data(namespace: str, v1: client.CoreV1Api, net_v1: client.NetworkingV1Api) -> Dict[str, Any]:
     """

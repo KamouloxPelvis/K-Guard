@@ -23,10 +23,37 @@
     targetIp?: string;
   }
 
-  interface SentinelStatusResponse {
-    deployed: boolean;
-    securityScore: number; // Ajoute ce champ
+  interface SecurityFinding {
+  id: string
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info'
+  namespace?: string
+  pod?: string
+  resource?: string
+  message: string
+}
+
+interface SecurityCategory {
+  score: number | null
+  weight: number
+  passed: number
+  failed: number
+  unknown: number
+}
+
+interface SentinelStatusResponse {
+  deployed: boolean
+  security_score: number | null
+  confidence: number
+  coverage: number
+  assessed_at: string
+  summary: {
+    passed: number
+    failed: number
+    unknown: number
   }
+  categories: Record<string, SecurityCategory>
+  findings: SecurityFinding[]
+}
 
   /**
    * API Response structure for the Sentinel Map.
@@ -60,18 +87,38 @@
   /**
  * Fetches the current Sentinel status to update the UI buttons accordingly.
  */
-  const securityScore = ref(0); // Nouvelle variable réactive
+  const securityScore = ref(0);
+  const securityCategories = ref<Record<string, SecurityCategory>>({});
+  const securityFindings = ref<SecurityFinding[]>([]);
+  const securityCoverage = ref(0);
+  const securityConfidence = ref(0);
+  const securityAssessedAt = ref('');
 
   const fetchSentinelStatus = async () => {
-
-    
-
     try {
-      const response = await api.get<SentinelStatusResponse>('/sentinel/status');
-      isHardened.value = response.data.deployed;
-      securityScore.value = response.data.securityScore;
+      const response = await api.get<SentinelStatusResponse>(
+        '/sentinel/status',
+      )
+
+      const data = response.data
+
+      isHardened.value = data.deployed
+      securityScore.value = data.security_score ?? 0
+      securityCategories.value = data.categories ?? {}
+      securityFindings.value = data.findings ?? []
+      securityCoverage.value = data.coverage ?? 0
+      securityConfidence.value = data.confidence ?? 0
+      securityAssessedAt.value = data.assessed_at ?? ''
     } catch (error) {
-      console.error("Erreur API:", error);
+      console.error('Sentinel security audit unavailable:', error)
+
+      isHardened.value = false
+      securityScore.value = 0
+      securityCategories.value = {}
+      securityFindings.value = []
+      securityCoverage.value = 0
+      securityConfidence.value = 0
+      securityAssessedAt.value = ''
     }
   };
 
@@ -205,38 +252,6 @@
     return `M ${start.x} ${start.y} C ${(start.x + end.x)/2} ${start.y}, ${(start.x + end.x)/2} ${end.y}, ${end.x} ${end.y}`;
   };
 
-  // --- SENTINEL ACTIONS ---
-
-  const isDeploying = ref(false); // Ajoute cet état
-
-  const triggerHarden = async () => {
-    if (!confirm("🚨 Apply Network Sentinel hardening?")) return;
-    
-    isDeploying.value = true;
-    try {
-      await api.post('/sentinel/activate', {});
-      
-      // Attente artificielle de 2s pour laisser le temps à Ansible d'initialiser les NetworkPolicies
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      await fetchSentinelStatus();
-      await fetchNetworkData();
-    } catch (err) {
-      console.error("Échec du déploiement :", err);
-    } finally {
-      isDeploying.value = false;
-    }
-  };
-
-  const triggerDeactivate = async () => {
-
-  if (!confirm("⚠️ Deactivate Zero-Trust policies?")) return;
-
-  await api.post('/sentinel/deactivate', {});
-  await fetchSentinelStatus(); // Refresh status after action
-  fetchNetworkData();
-};
-
   const toggleAccordion = (id: string) => {
     activeAccordion.value = activeAccordion.value === id ? null : id;
   };
@@ -277,7 +292,7 @@
         <div class="xl:col-span-3 bg-[#111217] border border-slate-800/60 rounded-sm p-5">
           <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div class="space-y-1">
-              
+
               <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em]">
                 Automated Micro-segmentation
               </p>
@@ -336,24 +351,6 @@
               >
                 {{ isLoading ? 'Syncing...' : 'Refresh Audit' }}
               </button>
-
-              <button
-                v-if="!isHardened"
-                @click="triggerHarden"
-                :disabled="isDeploying"
-                class="bg-[#f05a28]/10 hover:bg-[#f05a28]/20 disabled:opacity-50 disabled:cursor-not-allowed border border-[#f05a28] text-[#f05a28] px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all"
-              >
-                {{ isDeploying ? 'Deploying...' : 'Deploy Net Policies' }}
-              </button>
-
-              <button
-                v-else
-                @click="triggerDeactivate"
-                :disabled="isDeploying"
-                class="bg-red-500/10 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed border border-red-500 text-red-400 px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all"
-              >
-                Deactivate Policies
-              </button>
             </div>
           </div>
         </div>
@@ -408,6 +405,110 @@
           </div>
         </div>
       </div>
+
+      <!-- Security posture findings -->
+      <section class="bg-[#111217] border border-slate-800/60 rounded-sm p-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h3 class="text-[10px] text-slate-300 uppercase font-black tracking-[0.2em]">
+              Security posture findings
+            </h3>
+            <p class="mt-1 text-[8px] text-slate-600 uppercase">
+              Read-only assessment from Kubernetes API evidence
+            </p>
+          </div>
+
+          <div class="flex items-center gap-4 text-[8px] uppercase">
+            <span class="text-slate-500">
+              Coverage:
+              <span class="text-cyan-400">{{ securityCoverage }}%</span>
+            </span>
+
+            <span class="text-slate-500">
+              Confidence:
+              <span class="text-violet-400">{{ securityConfidence }}%</span>
+            </span>
+
+            <span
+              v-if="securityAssessedAt"
+              class="text-slate-600 font-mono"
+            >
+              {{ securityAssessedAt }}
+            </span>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+          <div
+            v-for="(category, name) in securityCategories"
+            :key="name"
+            class="border border-slate-800 bg-[#0b0c10] p-3"
+          >
+            <p class="text-[8px] text-slate-500 uppercase font-bold">
+              {{ name.replaceAll('_', ' ') }}
+            </p>
+
+            <p
+              class="mt-2 text-xl font-black"
+              :class="
+                category.score === null
+                  ? 'text-slate-500'
+                  : category.score < 50
+                    ? 'text-red-400'
+                    : category.score < 80
+                      ? 'text-amber-400'
+                      : 'text-emerald-400'
+              "
+            >
+              {{ category.score === null ? 'N/A' : `${category.score}%` }}
+            </p>
+
+            <p class="mt-1 text-[8px] text-slate-600">
+              {{ category.passed }} passed ·
+              {{ category.failed }} failed ·
+              {{ category.unknown }} unknown
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-if="securityFindings.length"
+          class="mt-4 space-y-2"
+        >
+          <div
+            v-for="finding in securityFindings.slice(0, 12)"
+            :key="`${finding.id}-${finding.namespace}-${finding.pod || finding.resource}`"
+            class="border border-slate-800 bg-[#0b0c10] p-3"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <p class="text-[9px] text-slate-300">
+                {{ finding.message }}
+              </p>
+
+              <span class="shrink-0 text-[8px] uppercase text-amber-400">
+                {{ finding.severity }}
+              </span>
+            </div>
+
+            <p
+              v-if="finding.namespace || finding.pod"
+              class="mt-1 text-[8px] text-slate-600 font-mono"
+            >
+              {{ finding.namespace || 'cluster' }}
+              <span v-if="finding.pod || finding.resource">
+                · {{ finding.pod || finding.resource }}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <p
+          v-else
+          class="mt-4 text-[9px] text-slate-600 uppercase tracking-widest"
+        >
+          No security findings returned by the audit.
+        </p>
+      </section>
 
       <!-- Topology -->
       <div
