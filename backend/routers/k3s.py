@@ -10,6 +10,7 @@ from backend.k3s_manager import (
 )
 from backend.metrics_manager import get_pod_metrics 
 from .auth import verify_token
+from backend.maintenance import run_safe_cleanup
 
 # Dedicated router for K3s Infrastructure management and monitoring
 router = APIRouter(tags=["K3s Infrastructure"])
@@ -89,3 +90,8 @@ async def k3s_storage(user: dict = Depends(verify_token)):
         "disks": disks,
         "timestamp": datetime.utcnow().isoformat()
     }
+
+@router.post("/k3s/maintenance/cleanup")
+async def safe_local_cleanup():
+    """Remove only approved temporary K-Guard files."""
+    return run_safe_cleanup()

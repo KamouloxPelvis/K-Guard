@@ -32,7 +32,25 @@
 
   const debugData = ref<DebugInfo | null>(null);
   const loading = ref(true);
-  const purging = ref(false);
+  interface CleanupItem {
+    target: string;
+    path: string;
+    removed_files: number;
+    removed_directories: number;
+    reclaimed_bytes: number;
+  }
+
+  interface CleanupResult {
+    status: string;
+    timestamp: string;
+    reclaimed_bytes: number;
+    reclaimed_mb: number;
+    items: CleanupItem[];
+    preserved: string[];
+  }
+
+  const cleaning = ref(false);
+  const cleanupResult = ref<CleanupResult | null>(null);
   const savingWebex = ref(false);
   const isAlreadyConfigured = ref(false);
 
@@ -87,19 +105,31 @@
   };
 
   /**
-   * SRE maintenance action: Clears local vulnerability databases to free up PVC space.
+   * Removes only approved temporary K-Guard files.
+   * Wazuh, Kubernetes and application data are preserved.
    */
-  const handlePurgeCache = async () => {
-    if (!confirm("⚠️ Purge local Trivy databases? This operation is irreversible.")) return;
-    purging.value = true;
+  const handleSafeCleanup = async () => {
+    if (!confirm(
+      "Run safe local cleanup? Wazuh, Kubernetes and application data will be preserved.",
+    )) {
+      return;
+    }
+
+    cleaning.value = true;
+    cleanupResult.value = null;
+
     try {
-      const { data } = await api.post<{ message: string }>('/k3s/debug/purge-cache', {});
-      alert(data.message);
+      const { data } = await api.post<CleanupResult>(
+        '/k3s/maintenance/cleanup',
+        {},
+      );
+
+      cleanupResult.value = data;
       await fetchSettings();
     } catch (error) {
-      alert("Purge operation failed.");
+      alert("Local cleanup failed.");
     } finally {
-      purging.value = false;
+      cleaning.value = false;
     }
   };
 
@@ -200,17 +230,67 @@
         </div>
       </div>
 
-      <div class="p-5 border border-red-900/30 bg-red-950/5 rounded-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <h3 class="text-xs text-red-500 font-bold uppercase tracking-[0.2em]">Maintenance Mode</h3>
-          <p class="text-[9px] text-slate-600 mt-1 uppercase leading-relaxed">
-            Reset local vulnerability cache and clear historical events.
+      <div class="p-5 border border-cyan-900/30 bg-cyan-950/5 rounded-sm">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xs text-cyan-400 font-bold uppercase tracking-[0.2em]">
+              Local maintenance
+            </h3>
+            <p class="text-[9px] text-slate-500 mt-1 uppercase leading-relaxed">
+              Remove approved temporary K-Guard files and reclaim local disk space.
+            </p>
+          </div>
+
+          <button
+            @click="handleSafeCleanup"
+            :disabled="cleaning"
+            class="bg-cyan-600/10 hover:bg-cyan-600/20 disabled:opacity-30 text-cyan-300 border border-cyan-500/30 px-6 py-2 rounded-sm text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer"
+          >
+            {{ cleaning ? 'Cleaning...' : 'Run safe cleanup' }}
+          </button>
+        </div>
+
+        <div
+          v-if="cleanupResult"
+          class="mt-4 border border-slate-800 bg-black/20 p-4"
+        >
+          <div class="flex flex-wrap gap-x-6 gap-y-2 text-[9px] uppercase">
+            <span class="text-slate-500">
+              Status:
+              <span class="text-emerald-400">{{ cleanupResult.status }}</span>
+            </span>
+
+            <span class="text-slate-500">
+              Reclaimed:
+              <span class="text-cyan-400">
+                {{ cleanupResult.reclaimed_mb }} MB
+              </span>
+            </span>
+
+            <span class="text-slate-500">
+              Completed:
+              <span class="text-slate-300">
+                {{ cleanupResult.timestamp }}
+              </span>
+            </span>
+          </div>
+
+          <div class="mt-3 space-y-1">
+            <p
+              v-for="item in cleanupResult.items"
+              :key="item.path"
+              class="text-[9px] text-slate-400 font-mono"
+            >
+              {{ item.path }} ·
+              {{ item.removed_files }} files ·
+              {{ item.removed_directories }} directories
+            </p>
+          </div>
+
+          <p class="mt-3 text-[8px] text-slate-600 uppercase">
+            Wazuh, Kubernetes, secrets and application data preserved.
           </p>
         </div>
-        <button @click="handlePurgeCache" :disabled="purging"
-          class="bg-red-600/90 hover:bg-red-700 disabled:opacity-30 text-white px-6 py-2 rounded-sm text-[9px] font-black uppercase tracking-widest transition-all">
-          {{ purging ? 'Executing...' : 'Purge All Caches' }}
-        </button>
       </div>
 
     </div>
