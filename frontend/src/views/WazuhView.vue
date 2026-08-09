@@ -704,10 +704,6 @@ onUnmounted(() => {
           <pre class="mt-2 bg-black border border-slate-800 p-3 text-[9px] text-slate-400 font-mono whitespace-pre-wrap break-words">{{ selectedAlert.full_log || 'No raw log available' }}</pre>
         </section>
 
-        <div class="mt-6 border border-emerald-900/30 bg-emerald-950/10 p-4">
-          <p class="text-[8px] text-emerald-400 uppercase font-bold tracking-widest">Investigation-safe workflow</p>
-          <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">This alert is visible for triage and evidence collection. Notification and remediation actions will be introduced only through explicit, audited confirmation workflows.</p>
-        </div>
       </aside>
     </div>
     </Teleport>
