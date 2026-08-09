@@ -24,11 +24,15 @@ interface WazuhAlert {
   level: number
   rule_id: string
   description: string
+  firedtimes: number
   groups: string[]
   agent: {
     id: string
     name: string
     ip: string
+  }
+  manager: {
+    name: string
   }
   mitre: {
     ids: string[]
@@ -36,7 +40,10 @@ interface WazuhAlert {
     tactics: string[]
   }
   location: string
+  decoder: Record<string, unknown>
+  predecoder: Record<string, unknown>
   data: Record<string, unknown>
+  syscheck: Record<string, unknown>
   full_log: string
 }
 
@@ -678,6 +685,8 @@ onUnmounted(() => {
           <div class="border border-slate-800 p-3"><p class="text-[8px] text-slate-500 uppercase">Severity</p><p class="mt-1 text-[10px] font-mono" :class="severityClass(selectedAlert.level)">{{ severityName(selectedAlert.level) }} · Level {{ selectedAlert.level }}</p></div>
           <div class="border border-slate-800 p-3"><p class="text-[8px] text-slate-500 uppercase">Endpoint</p><p class="mt-1 text-[10px] text-cyan-400 font-mono">{{ selectedAlert.agent.name }} · {{ selectedAlert.agent.ip }}</p></div>
           <div class="border border-slate-800 p-3"><p class="text-[8px] text-slate-500 uppercase">Location</p><p class="mt-1 text-[10px] text-slate-300 font-mono break-all">{{ selectedAlert.location }}</p></div>
+          <div class="border border-slate-800 p-3"><p class="text-[8px] text-slate-500 uppercase">Rule fired</p><p class="mt-1 text-[10px] text-slate-300 font-mono">{{ selectedAlert.firedtimes }}</p></div>
+          <div class="border border-slate-800 p-3"><p class="text-[8px] text-slate-500 uppercase">Manager</p><p class="mt-1 text-[10px] text-slate-300 font-mono break-all">{{ selectedAlert.manager.name }}</p></div>
         </div>
 
         <section class="mt-5">
@@ -691,7 +700,12 @@ onUnmounted(() => {
 
         <section class="mt-5">
           <h4 class="text-[9px] text-slate-400 uppercase font-bold tracking-widest">Event fields</h4>
-          <pre class="mt-2 bg-black border border-slate-800 p-3 text-[9px] text-cyan-300 font-mono whitespace-pre-wrap break-words">{{ JSON.stringify(selectedAlert.data, null, 2) }}</pre>
+          <pre class="mt-2 bg-black border border-slate-800 p-3 text-[9px] text-cyan-300 font-mono whitespace-pre-wrap break-words">{{ JSON.stringify({
+            decoder: selectedAlert.decoder,
+            predecoder: selectedAlert.predecoder,
+            data: selectedAlert.data,
+            syscheck: selectedAlert.syscheck,
+          }, null, 2) }}</pre>
         </section>
 
         <section class="mt-5">

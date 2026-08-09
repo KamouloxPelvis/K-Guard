@@ -61,6 +61,7 @@ class WazuhIndexerClient:
     def _normalize_alert(hit: dict[str, Any]) -> dict[str, Any]:
         source = hit.get("_source") or {}
         agent = source.get("agent") or {}
+        manager = source.get("manager") or {}
         rule = source.get("rule") or {}
         mitre = rule.get("mitre") or {}
 
@@ -70,11 +71,15 @@ class WazuhIndexerClient:
             "level": int(rule.get("level") or 0),
             "rule_id": str(rule.get("id") or ""),
             "description": rule.get("description") or "Wazuh alert",
+            "firedtimes": int(rule.get("firedtimes") or 0),
             "groups": rule.get("groups") or [],
             "agent": {
                 "id": str(agent.get("id") or ""),
                 "name": agent.get("name") or "Unknown",
                 "ip": agent.get("ip") or "N/A",
+            },
+            "manager": {
+                "name": manager.get("name") or "N/A",
             },
             "mitre": {
                 "ids": mitre.get("id") or [],
@@ -82,7 +87,14 @@ class WazuhIndexerClient:
                 "tactics": mitre.get("tactic") or [],
             },
             "location": source.get("location") or "N/A",
+            "decoder": source.get("decoder") or {},
+            "predecoder": source.get("predecoder") or {},
             "data": source.get("data") or {},
+            "syscheck": (
+                source.get("syscheck")
+                or (source.get("data") or {}).get("syscheck")
+                or {}
+            ),
             "full_log": source.get("full_log") or "",
         }
 
@@ -103,9 +115,17 @@ class WazuhIndexerClient:
                     "rule.id",
                     "rule.level",
                     "rule.description",
+                    "rule.firedtimes",
                     "rule.groups",
                     "rule.mitre",
+                    "agent.id",
+                    "agent.name",
+                    "agent.ip",
+                    "manager.name",
+                    "decoder",
+                    "predecoder",
                     "data",
+                    "syscheck",
                     "location",
                     "full_log",
                 ],
