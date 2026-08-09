@@ -32,9 +32,34 @@ const alerts = ref<SecurityAlert[]>([])
 const isLoading = ref(true)
 const selectedRange = ref('now-15m')
 const activeTab = ref<'dashboard' | 'alerts'>('dashboard')
-const selectedAlert = ref<SecurityAlert | null>(null)
+const selectedAlertIndex = ref(0)
 
-const featuredAlert = computed(() => selectedAlert.value || alerts.value[0] || null)
+const featuredAlert = computed(() => {
+  return alerts.value[selectedAlertIndex.value] || null
+})
+
+const canGoPrevious = computed(() => selectedAlertIndex.value > 0)
+
+const canGoNext = computed(() => {
+  return selectedAlertIndex.value < alerts.value.length - 1
+})
+
+const selectAlert = (index: number) => {
+  if (index < 0 || index >= alerts.value.length) return
+  selectedAlertIndex.value = index
+}
+
+const previousAlert = () => {
+  if (canGoPrevious.value) {
+    selectedAlertIndex.value -= 1
+  }
+}
+
+const nextAlert = () => {
+  if (canGoNext.value) {
+    selectedAlertIndex.value += 1
+  }
+}
 
 const parseEnrichment = (value: unknown): AiEnrichment | null => {
   if (!value) return null
@@ -106,6 +131,8 @@ const fetchAlerts = async () => {
       return 3
     }
 
+    const previousAlertId = featuredAlert.value?.id || null
+
     alerts.value = rawAlerts.map((alert: any, index: number) => {
       const level = severityLevel(alert)
 
@@ -127,6 +154,14 @@ const fetchAlerts = async () => {
         created_at: alert.created_at || '',
       }
     })
+
+    const refreshedIndex = previousAlertId
+      ? alerts.value.findIndex((alert) => alert.id === previousAlertId)
+      : -1
+
+    selectedAlertIndex.value = refreshedIndex >= 0
+      ? refreshedIndex
+      : Math.min(selectedAlertIndex.value, Math.max(alerts.value.length - 1, 0))
   } catch (error) {
     console.error('[K-Guard] Runtime Security Fetch Error:', error)
     alerts.value = []
@@ -196,6 +231,40 @@ onUnmounted(() => {
           </span>
         </div>
 
+        <div
+          v-if="alerts.length"
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-slate-800 bg-[#111217]/70 px-3 py-2"
+        >
+          <span class="text-[9px] text-slate-500 uppercase tracking-[0.18em]">
+            Selected event
+            {{ selectedAlertIndex + 1 }}
+            /
+            {{ alerts.length }}
+          </span>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              @click="previousAlert"
+              :disabled="!canGoPrevious"
+              class="border border-slate-700 px-3 py-1 text-[10px] text-slate-300 transition-colors hover:border-cyan-500 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-30"
+              aria-label="Previous alert"
+            >
+              ←
+            </button>
+
+            <button
+              type="button"
+              @click="nextAlert"
+              :disabled="!canGoNext"
+              class="border border-slate-700 px-3 py-1 text-[10px] text-slate-300 transition-colors hover:border-cyan-500 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-30"
+              aria-label="Next alert"
+            >
+              →
+            </button>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
           <div class="bg-[#111217]/80 border border-slate-800 p-4 rounded-sm">
             <p class="text-[8px] text-slate-500 uppercase font-bold tracking-[0.18em]">Events loaded</p>
@@ -213,6 +282,12 @@ onUnmounted(() => {
             <p class="text-[8px] text-orange-400 uppercase font-bold tracking-[0.18em]">High</p>
             <p class="mt-2 text-3xl font-light text-orange-300">{{ summary.high }}</p>
             <p class="mt-1 text-[8px] text-slate-600 uppercase">Priority triage queue</p>
+          </div>
+
+          <div class="bg-[#111217]/80 border border-cyan-900/30 p-4 rounded-sm">
+            <p class="text-[8px] text-cyan-400 uppercase font-bold tracking-[0.18em]">Low</p>
+            <p class="mt-2 text-3xl font-light text-cyan-300">{{ summary.low }}</p>
+            <p class="mt-1 text-[8px] text-slate-600 uppercase">Lower priority events</p>
           </div>
         </div>
 
@@ -286,7 +361,7 @@ onUnmounted(() => {
               </div>
 
               <span class="shrink-0 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[8px] text-violet-300 uppercase font-bold">
-                Preparing
+                {{ featuredAlert?.ai_status || 'Unavailable' }}
               </span>
             </div>
 
@@ -372,9 +447,9 @@ onUnmounted(() => {
         <section class="space-y-2">
           <div
           v-for="alert in alerts"
-          @click="selectedAlert = alert"
+          @click="selectAlert(alerts.findIndex((item) => item.id === alert.id))"
           :key="alert.id"
-          class="bg-[#181b1f] border-l-2 border-red-500 p-4 flex justify-between items-start gap-4 hover:bg-[#1e2329] transition-all"
+          class="cursor-pointer bg-[#181b1f] border-l-2 border-red-500 p-4 flex justify-between items-start gap-4 hover:bg-[#1e2329] transition-all"
         >
           <div class="min-w-0 flex-1">
             <h3 class="break-words font-mono text-sm font-bold text-white leading-snug">
