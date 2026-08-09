@@ -154,7 +154,7 @@ onUnmounted(() => {
         </p>
 
         <p class="text-[8px] text-slate-600 uppercase tracking-widest mt-2">
-          Read-only runtime observability · Falco, Wazuh and K-Guard AI
+          Read-only runtime observability · Falco and K-Guard AI
         </p>
       </div>
 
@@ -192,7 +192,7 @@ onUnmounted(() => {
           </select>
 
           <span class="text-[9px] text-slate-500 uppercase tracking-[0.18em]">
-            Runtime telemetry window · {{ rangeLabel }}
+            Runtime telemetry · {{ rangeLabel }}
           </span>
         </div>
 
@@ -206,19 +206,13 @@ onUnmounted(() => {
           <div class="bg-[#111217]/80 border border-red-900/30 p-4 rounded-sm">
             <p class="text-[8px] text-red-400 uppercase font-bold tracking-[0.18em]">Critical</p>
             <p class="mt-2 text-3xl font-light text-red-300">{{ summary.critical }}</p>
-            <p class="mt-1 text-[8px] text-slate-600 uppercase">Falco / Wazuh severe events</p>
+            <p class="mt-1 text-[8px] text-slate-600 uppercase">Falco severe events</p>
           </div>
 
           <div class="bg-[#111217]/80 border border-orange-900/30 p-4 rounded-sm">
             <p class="text-[8px] text-orange-400 uppercase font-bold tracking-[0.18em]">High</p>
             <p class="mt-2 text-3xl font-light text-orange-300">{{ summary.high }}</p>
             <p class="mt-1 text-[8px] text-slate-600 uppercase">Priority triage queue</p>
-          </div>
-
-          <div class="bg-[#111217]/80 border border-cyan-900/30 p-4 rounded-sm">
-            <p class="text-[8px] text-cyan-400 uppercase font-bold tracking-[0.18em]">Mode</p>
-            <p class="mt-2 text-xl font-light text-cyan-300">Native UI</p>
-            <p class="mt-1 text-[8px] text-slate-600 uppercase">No external iframe dependency</p>
           </div>
         </div>
 
@@ -233,10 +227,6 @@ onUnmounted(() => {
                 <h3 class="mt-2 text-[11px] text-slate-200 uppercase font-black tracking-[0.2em]">
                   Security event context
                 </h3>
-
-                <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
-                  Consolidated runtime events from Falco, Wazuh and Kubernetes telemetry.
-                </p>
               </div>
 
               <span class="shrink-0 border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[8px] text-cyan-400 uppercase font-bold">
@@ -301,9 +291,6 @@ onUnmounted(() => {
             </div>
 
             <div class="mt-5 min-h-28 border border-violet-900/30 bg-violet-950/10 p-4">
-              <p class="text-[9px] text-violet-300 uppercase tracking-widest">
-                AI enrichment layer
-              </p>
 
               <template v-if="featuredAlert?.ai_enrichment">
                 <p class="mt-3 text-[10px] text-slate-200 leading-relaxed">
@@ -364,14 +351,6 @@ onUnmounted(() => {
                 <div class="h-full" :class="bar.color" :style="{ width: bar.width }"></div>
               </div>
             </div>
-          </div>
-
-          <div class="mt-5 border border-cyan-900/30 bg-cyan-950/10 p-4 rounded-sm">
-            <p class="text-[8px] text-cyan-400 uppercase font-bold tracking-widest">Portfolio-safe design</p>
-            <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
-              This runtime view no longer depends on an embedded Kibana dashboard. K-Guard now renders a native,
-              read-only observability layer from backend security events.
-            </p>
           </div>
         </div>
       </div>
