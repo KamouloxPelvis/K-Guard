@@ -331,7 +331,7 @@ onUnmounted(() => {
           Wazuh Endpoint Inventory, Posture & Alert Investigation
         </p>
         <p class="text-[8px] text-slate-600 uppercase tracking-widest mt-2">
-          Read-only security integration · Last synchronization: {{ refreshedAt || 'N/A' }}
+          · Last synchronization: {{ refreshedAt || 'N/A' }}
         </p>
       </div>
 
@@ -379,7 +379,7 @@ onUnmounted(() => {
     </div>
 
     <div v-else-if="overview && inventory" class="max-w-7xl mx-auto space-y-4 pb-10">
-      <section class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="bg-[#111217]/80 border border-slate-800 p-4 rounded-sm">
           <p class="text-[8px] text-slate-500 uppercase font-bold tracking-[0.18em]">Managed endpoints</p>
           <p class="mt-2 text-3xl font-light text-white">{{ inventory.summary.total }}</p>
@@ -398,11 +398,6 @@ onUnmounted(() => {
           <p class="mt-1 text-[8px] text-slate-600 uppercase">{{ overview.alerts.total }} alerts retained</p>
         </div>
 
-        <div class="bg-[#111217]/80 border border-cyan-900/30 p-4 rounded-sm">
-          <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.18em]">Alert stream</p>
-          <p class="mt-2 text-3xl font-light text-cyan-400">{{ overview.alerts.available ? 'Live' : 'N/A' }}</p>
-          <p class="mt-1 text-[8px] text-slate-600 uppercase">Indexer read-only query</p>
-        </div>
       </section>
 
       <section class="bg-[#111217]/80 border border-slate-800 rounded-sm p-1 flex flex-wrap gap-1">
@@ -485,7 +480,7 @@ onUnmounted(() => {
       </section>
 
       <section v-else-if="activeTab === 'posture'" class="space-y-4">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <article class="bg-[#111217]/80 border border-slate-800 rounded-sm p-5">
             <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.18em]">Endpoint coverage</p>
             <p class="mt-3 text-4xl font-light text-white">
@@ -502,11 +497,6 @@ onUnmounted(() => {
             <p class="mt-2 text-[9px] text-slate-500 uppercase">High and critical alerts in retained Wazuh indices</p>
           </article>
 
-          <article class="bg-[#111217]/80 border border-slate-800 rounded-sm p-5">
-            <p class="text-[8px] text-emerald-500 uppercase font-bold tracking-[0.18em]">Runtime-safe design</p>
-            <p class="mt-3 text-xl font-light text-emerald-400">Read only</p>
-            <p class="mt-2 text-[9px] text-slate-500 uppercase">No agent, rule, index or Kubernetes mutation</p>
-          </article>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
