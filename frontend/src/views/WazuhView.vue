@@ -600,8 +600,8 @@ onUnmounted(() => {
       </section>
     </div>
 
-    <div v-if="selectedAgent" class="fixed inset-0 z-50 bg-black/70 flex justify-end" @click.self="selectedAgent = null">
-      <aside class="h-full w-full max-w-md bg-[#111217] border-l border-slate-700 shadow-2xl p-6 overflow-y-auto">
+    <div v-if="selectedAgent" class="fixed inset-0 z-[200] bg-black/70 flex justify-end" @click.self="selectedAgent = null">
+      <aside class="relative z-[201] h-full w-full max-w-md bg-[#111217] border-l border-slate-700 shadow-2xl p-6 overflow-y-auto">
         <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
           <div class="min-w-0 flex-1">
             <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.2em]">
@@ -642,8 +642,8 @@ onUnmounted(() => {
       </aside>
     </div>
 
-    <div v-if="selectedAlert" class="fixed inset-0 z-50 bg-black/70 flex justify-end" @click.self="selectedAlert = null">
-      <aside class="h-full w-full max-w-2xl bg-[#111217] border-l border-slate-700 shadow-2xl p-6 overflow-y-auto">
+    <div v-if="selectedAlert" class="fixed inset-0 z-[200] bg-black/70 flex justify-end" @click.self="selectedAlert = null">
+      <aside class="relative z-[201] h-full w-full max-w-2xl bg-[#111217] border-l border-slate-700 shadow-2xl p-6 overflow-y-auto">
         <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
           <div class="min-w-0 flex-1">
             <p class="text-[8px] text-cyan-500 uppercase font-bold tracking-[0.2em]">
