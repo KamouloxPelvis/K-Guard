@@ -204,7 +204,9 @@ async def get_runtime_alerts(
                 created_at,
                 updated_at
             FROM security_events
-            ORDER BY id DESC
+            ORDER BY
+                CASE WHEN source = 'kguard-ai' THEN 0 ELSE 1 END,
+                id DESC
             LIMIT ?
             """,
             (limit,),

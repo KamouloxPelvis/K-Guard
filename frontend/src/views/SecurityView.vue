@@ -2,12 +2,29 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/services/api'
 
+interface AiEnrichment {
+  model?: string | null
+  verdict?: string | null
+  analyst_summary?: string | null
+  human_summary?: string | null
+  incident_type?: string | null
+  risk_level?: string | null
+  confidence_score?: number | null
+  investigation_steps?: string[]
+  iocs?: string[]
+  hypotheses?: string[]
+  recommended_actions?: string[]
+}
+
 interface SecurityAlert {
   id: string
   source: string
   severity: string
   level: number
   message: string
+  rule_name: string
+  ai_status: string
+  ai_enrichment: AiEnrichment | null
   created_at: string
 }
 
@@ -15,6 +32,20 @@ const alerts = ref<SecurityAlert[]>([])
 const isLoading = ref(true)
 const selectedRange = ref('now-15m')
 const activeTab = ref<'dashboard' | 'alerts'>('dashboard')
+const selectedAlert = ref<SecurityAlert | null>(null)
+
+const featuredAlert = computed(() => selectedAlert.value || alerts.value[0] || null)
+
+const parseEnrichment = (value: unknown): AiEnrichment | null => {
+  if (!value) return null
+  if (typeof value === 'object') return value as AiEnrichment
+
+  try {
+    return JSON.parse(String(value)) as AiEnrichment
+  } catch {
+    return null
+  }
+}
 
 let interval: ReturnType<typeof setInterval>
 
@@ -85,10 +116,13 @@ const fetchAlerts = async () => {
           alert.priority || alert.severity || 'INFO',
         ).toUpperCase()}`,
         level,
+        rule_name: alert.rule_name || 'Unknown rule',
+        ai_status: alert.ai_status || 'pending',
+        ai_enrichment: parseEnrichment(alert.ai_enrichment),
         message:
-          alert.rule_name ||
           alert.message ||
           alert.output ||
+          alert.rule_name ||
           'No description available',
         created_at: alert.created_at || '',
       }
@@ -211,12 +245,40 @@ onUnmounted(() => {
             </div>
 
             <div class="mt-5 min-h-28 border border-slate-800 bg-black/20 p-4">
-              <p class="text-[9px] text-slate-600 uppercase tracking-widest">
-                Runtime correlation layer ready
-              </p>
+              <template v-if="featuredAlert">
+                <p class="text-[9px] text-cyan-300 uppercase tracking-widest">
+                  {{ featuredAlert.rule_name }}
+                </p>
 
-              <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
-                This area will display correlated events, affected workloads and investigation context.
+                <p class="mt-3 text-[10px] text-slate-300 leading-relaxed">
+                  {{ featuredAlert.message }}
+                </p>
+
+                <div
+                  v-if="featuredAlert.ai_enrichment?.recommended_actions?.length"
+                  class="mt-4"
+                >
+                  <p class="text-[8px] text-slate-500 uppercase tracking-widest">
+                    Recommended investigation actions
+                  </p>
+
+                  <ul class="mt-2 space-y-1">
+                    <li
+                      v-for="action in featuredAlert.ai_enrichment.recommended_actions"
+                      :key="action"
+                      class="text-[9px] text-slate-400"
+                    >
+                      • {{ action }}
+                    </li>
+                  </ul>
+                </div>
+              </template>
+
+              <p
+                v-else
+                class="text-[9px] text-slate-500"
+              >
+                No runtime event selected.
               </p>
             </div>
           </article>
@@ -243,8 +305,41 @@ onUnmounted(() => {
                 AI enrichment layer
               </p>
 
-              <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
-                AI-generated summaries, probable impact, MITRE context and investigation recommendations will appear here.
+              <template v-if="featuredAlert?.ai_enrichment">
+                <p class="mt-3 text-[10px] text-slate-200 leading-relaxed">
+                  {{
+                    featuredAlert.ai_enrichment.human_summary ||
+                    featuredAlert.ai_enrichment.analyst_summary ||
+                    featuredAlert.message
+                  }}
+                </p>
+
+                <div class="mt-3 flex flex-wrap gap-2 text-[8px] uppercase">
+                  <span class="border border-violet-500/30 px-2 py-1 text-violet-300">
+                    {{ featuredAlert.ai_status }}
+                  </span>
+
+                  <span class="border border-amber-500/30 px-2 py-1 text-amber-300">
+                    Risk:
+                    {{ featuredAlert.ai_enrichment.risk_level || 'unknown' }}
+                  </span>
+
+                  <span class="border border-cyan-500/30 px-2 py-1 text-cyan-300">
+                    Confidence:
+                    {{
+                      featuredAlert.ai_enrichment.confidence_score != null
+                        ? `${Math.round(featuredAlert.ai_enrichment.confidence_score * 100)}%`
+                        : 'N/A'
+                    }}
+                  </span>
+                </div>
+              </template>
+
+              <p
+                v-else
+                class="mt-2 text-[9px] text-slate-500 leading-relaxed"
+              >
+                No AI enrichment is available for the selected event.
               </p>
             </div>
           </aside>
@@ -298,6 +393,7 @@ onUnmounted(() => {
         <section class="space-y-2">
           <div
           v-for="alert in alerts"
+          @click="selectedAlert = alert"
           :key="alert.id"
           class="bg-[#181b1f] border-l-2 border-red-500 p-4 flex justify-between items-start gap-4 hover:bg-[#1e2329] transition-all"
         >
