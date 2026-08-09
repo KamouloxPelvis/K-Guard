@@ -277,13 +277,13 @@
         <div class="xl:col-span-3 bg-[#111217] border border-slate-800/60 rounded-sm p-5">
           <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div class="space-y-1">
-              <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em]">
-                Automated Micro-segmentation
-              </p>
               <div class="flex items-center gap-3 flex-wrap">
                 <h2 class="text-lg font-black text-white uppercase tracking-tighter">
                   Network Sentinel <span class="text-blue-500">v2.0</span>
                 </h2>
+                <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em]">
+                  Automated Micro-segmentation
+                </p>
 
                 <span
                   v-if="isHardened"

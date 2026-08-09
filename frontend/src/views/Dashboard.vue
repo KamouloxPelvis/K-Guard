@@ -118,7 +118,6 @@
       </button>
       
       <div class="h-14 px-6 md:px-0 md:justify-center lg:px-6 flex items-center gap-3 border-b border-slate-800/50 bg-[#111217]">
-        <img src="/logo_small.png" alt="K-Guard" class="w-8 h-8 object-contain" />
         <span class="hidden lg:block text-white font-valorant text-lg tracking-[0.2em] mt-1">
           K-<span class="text-[#f05a28]">GUARD</span>
         </span>
