@@ -42,3 +42,25 @@ Thumbs.db
 frontend/tsconfig.app.tsbuildinfo
 
 .backup-before-*/
+
+# Local backups and generated artifacts
+.backup-before-*/
+**/__pycache__/
+*.py[cod]
+*.bak
+*.backup
+*.old
+*~
+*.sqlite
+*.sqlite3
+
+# Local runtime database
+backend/data/*.db
+
+# Local backup and generated artifacts
+*.bak
+*.backup
+*.old
+*~
+*.sqlite
+**/__pycache__/
