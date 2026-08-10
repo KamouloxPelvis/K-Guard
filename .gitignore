@@ -57,10 +57,3 @@ frontend/tsconfig.app.tsbuildinfo
 # Local runtime database
 backend/data/*.db
 
-# Local backup and generated artifacts
-*.bak
-*.backup
-*.old
-*~
-*.sqlite
-**/__pycache__/
