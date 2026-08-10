@@ -40,6 +40,14 @@ interface SecurityCategory {
   unknown: number
 }
 
+interface SecurityRecommendation {
+  id: string
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  title: string
+  description: string
+  action: string
+}
+
 interface HardeningPolicy {
   name: string
   namespace: string
@@ -105,7 +113,7 @@ interface SentinelStatusResponse {
   const showRoleModal = ref(false);
   const selectedPod = ref<PodNode | null>(null);
   const currentViewMode = ref('list');
-  const activeSentinelTab = ref<'map' | 'security' | 'policies'>('map');
+  const activeSentinelTab = ref<'map' | 'security' | 'recommendations' | 'policies'>('map');
   const activeAccordion = ref<string | null>(null);
   const isHardened = ref(false);
   const isDeploying = ref(false);
@@ -177,6 +185,58 @@ interface SentinelStatusResponse {
    * Filters and sorts pods based on the selected namespace.
    * Vulnerable pods are prioritized in the list for visibility.
    */
+  const securityRecommendations = computed<SecurityRecommendation[]>(() => {
+    const recommendations: SecurityRecommendation[] = []
+    const categories = securityCategories.value
+
+    const networkScore = categories.network_policies?.score
+    const podScore = categories.pod_hardening?.score
+    const admissionScore = categories.admission?.score
+    const supplyChainScore = categories.supply_chain?.score
+
+    if (networkScore !== null && networkScore !== undefined && networkScore < 100) {
+      recommendations.push({
+        id: 'network-policies',
+        severity: networkScore === 0 ? 'critical' : 'high',
+        title: 'Review network policy coverage',
+        description: 'Some workloads are not fully covered by the expected NetworkPolicies.',
+        action: 'Open the Network Policies tab and review the hardening plan.',
+      })
+    }
+
+    if (podScore !== null && podScore !== undefined && podScore < 80) {
+      recommendations.push({
+        id: 'pod-hardening',
+        severity: podScore < 50 ? 'high' : 'medium',
+        title: 'Harden workload security contexts',
+        description: 'Some containers lack explicit security controls or allow risky runtime settings.',
+        action: 'Review privileged containers, privilege escalation and runAsNonRoot findings.',
+      })
+    }
+
+    if (admissionScore === 0) {
+      recommendations.push({
+        id: 'pod-security-admission',
+        severity: 'high',
+        title: 'Configure Pod Security Admission',
+        description: 'Namespaces do not currently declare a Pod Security Admission enforcement level.',
+        action: 'Define an appropriate pod-security.kubernetes.io/enforce label per namespace.',
+      })
+    }
+
+    if (supplyChainScore !== null && supplyChainScore !== undefined && supplyChainScore < 80) {
+      recommendations.push({
+        id: 'supply-chain',
+        severity: 'medium',
+        title: 'Use immutable container images',
+        description: 'Several workloads use mutable tags or cannot be verified by digest.',
+        action: 'Prefer image references pinned with @sha256 digests.',
+      })
+    }
+
+    return recommendations
+  })
+
   const filteredPods = computed(() => {
     const list = selectedNS.value === 'all-protected' 
       ? pods.value 
@@ -542,6 +602,18 @@ interface SentinelStatusResponse {
         </button>
 
         <button
+          @click="activeSentinelTab = 'recommendations'"
+          :class="
+            activeSentinelTab === 'recommendations'
+              ? 'bg-amber-600 text-white'
+              : 'text-slate-500 hover:text-slate-300'
+          "
+          class="px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-sm transition-all"
+        >
+          Recommendations
+        </button>
+
+        <button
           @click="activeSentinelTab = 'policies'"
           :class="
             activeSentinelTab === 'policies'
@@ -636,6 +708,74 @@ interface SentinelStatusResponse {
           class="mt-6 text-[9px] text-red-400 uppercase tracking-widest"
         >
           Hardening plan unavailable.
+        </p>
+      </section>
+
+      <!-- Security recommendations -->
+      <section
+        v-if="activeSentinelTab === 'recommendations'"
+        class="bg-[#111217] border border-slate-800/60 rounded-sm p-4"
+      >
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-[10px] text-slate-300 uppercase font-black tracking-[0.2em]">
+              Security recommendations
+            </h3>
+            <p class="mt-1 text-[8px] text-slate-600 uppercase">
+              Prioritized actions derived from the read-only audit
+            </p>
+          </div>
+
+          <span class="text-[9px] text-amber-400 font-mono">
+            {{ securityRecommendations.length }} recommendations
+          </span>
+        </div>
+
+        <div
+          v-if="securityRecommendations.length"
+          class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3"
+        >
+          <article
+            v-for="recommendation in securityRecommendations"
+            :key="recommendation.id"
+            class="border border-slate-800 bg-[#0b0c10] p-4"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <h4 class="text-[10px] text-white uppercase font-black">
+                {{ recommendation.title }}
+              </h4>
+
+              <span
+                class="text-[8px] uppercase font-bold"
+                :class="
+                  recommendation.severity === 'critical'
+                    ? 'text-red-400'
+                    : recommendation.severity === 'high'
+                      ? 'text-orange-400'
+                      : recommendation.severity === 'medium'
+                        ? 'text-amber-400'
+                        : 'text-cyan-400'
+                "
+              >
+                {{ recommendation.severity }}
+              </span>
+            </div>
+
+            <p class="mt-3 text-[9px] text-slate-400 leading-relaxed">
+              {{ recommendation.description }}
+            </p>
+
+            <p class="mt-3 text-[8px] text-cyan-400 uppercase tracking-wider">
+              {{ recommendation.action }}
+            </p>
+          </article>
+        </div>
+
+        <p
+          v-else
+          class="mt-6 text-[9px] text-emerald-400 uppercase tracking-widest"
+        >
+          No active recommendation generated by the current audit.
         </p>
       </section>
 
