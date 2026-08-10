@@ -1,22 +1,22 @@
 # K-Guard
 
-**Current release:** `v1.7.0` — Grouped Network Security Policies
+**Current release:** `v1.7.0` — Native Security Monitoring & Grouped Network Policies
 
-> A security and monitoring platform that helps protect K3s clusters from a single dashboard.
+> A native security, observability, and network-governance platform for K3s clusters.
 
-[![OpenSSF Baseline](https://www.bestpractices.dev/projects/12124/baseline)](https://www.bestpractices.dev/projects/12124)
+[![OpenSSF Baseline](https://www.bestpractices.dev/projects/12124/baseline)](https://www.bestpractices.dev/projects/12124/baseline)
 
 [![Cisco DevNet Code Exchange](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/KamouloxPelvis/K-Guard)
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
-**K-Guard** is engineered in alignment with industry security practices and is published on the Cisco DevNet Code Exchange platform.
+**K-Guard** is engineered in alignment with modern security, DevSecOps, and infrastructure-management practices.
 
-However, K-Guard is a personal and experimental Minimum Viable Product designed as a research and learning platform for DevSecOps security architectures.
+The project is published on the Cisco DevNet Code Exchange platform and is developed as a personal and experimental Minimum Viable Product for security governance and observability in K3s environments.
 
-The platform is continuously evolving and must be reviewed, tested, and hardened before being used in a production environment.
+K-Guard is continuously evolving and must be reviewed, tested, and hardened before being used in a production environment.
 
 K-Guard does not replace:
 
@@ -25,18 +25,19 @@ K-Guard does not replace:
 - An incident-response plan.
 - A business-continuity strategy.
 - An independent security assessment.
-- Professional Kubernetes and infrastructure administration.
+- Professional Kubernetes administration.
+- A complete enterprise security platform.
 
 ---
 
-## 📍 Summary
+## Summary
 
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Key Capabilities](#key-capabilities)
 - [System Overview](#system-overview)
-- [Runtime Security](#runtime-security)
-- [Wazuh Security Monitoring](#wazuh-security-monitoring)
+- [Security Runtime](#security-runtime)
+- [Endpoint & Compliance](#endpoint--compliance)
 - [Network Sentinel](#network-sentinel)
 - [Cisco Webex Notifications](#cisco-webex-notifications)
 - [Security Model](#security-model)
@@ -51,28 +52,29 @@ K-Guard does not replace:
 
 ## Overview
 
-K-Guard is a security governance and observability platform designed to help protect K3s clusters from a single web dashboard.
+K-Guard is a native security and observability platform designed to help protect K3s clusters from a single web dashboard.
 
-It brings together infrastructure monitoring, runtime security, endpoint visibility, network-security controls, and operational notifications.
+It centralizes:
 
-K-Guard is designed for infrastructure and security teams that need a clearer view of their Kubernetes environment without switching continuously between several independent tools.
+- Cluster and workload monitoring.
+- Runtime-security events.
+- AI-enriched security analysis.
+- Wazuh endpoint visibility.
+- Wazuh security posture and alerts.
+- Network-policy posture.
+- Network isolation controls.
+- Security recommendations.
+- Cisco Webex notifications.
 
-The platform currently integrates:
+K-Guard is designed for infrastructure, DevOps, DevSecOps, and security professionals who need a clear operational view of their Kubernetes environment without switching continuously between several external dashboards.
 
-- **K3s / Kubernetes** for cluster and workload monitoring.
-- **Falco** for runtime threat detection.
-- **Fluent Bit** for log forwarding.
-- **Elasticsearch and Kibana** for event storage and investigation.
-- **Wazuh** for endpoint inventory, security posture, and alert visibility.
-- **Cisco Webex** for operational and security notifications.
-- **Kubernetes NetworkPolicies** for network-isolation controls.
-- **Ansible automation** for controlled Sentinel policy management.
+The main security and observability information is presented directly inside the K-Guard interface.
 
 ---
 
 ## Architecture
 
-K-Guard follows a backend-mediated architecture:
+K-Guard follows a backend-mediated architecture.
 
 ```text
                          ┌────────────────────┐
@@ -85,26 +87,36 @@ K-Guard follows a backend-mediated architecture:
                          ┌────────────────────┐
                          │  K-Guard Backend   │
                          │ FastAPI / Python   │
-                         └─────────┬──────────┘
-                                   │
-          ┌────────────────────────┼────────────────────────┐
-          │                        │                        │
-          ▼                        ▼                        ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Kubernetes API  │     │ Wazuh Manager   │     │ Runtime Security│
-│ K3s workloads   │     │ Security data   │     │ Falco / Elastic │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                   │
+                         └──────┬─────┬───────┘
+                                │     │
+                 ┌──────────────┘     └──────────────┐
+                 ▼                                   ▼
+        ┌─────────────────┐                 ┌─────────────────┐
+        │ Kubernetes / K3s│                 │ Security Inputs │
+        │ Workloads       │                 │ Falco / Wazuh  │
+        └────────┬────────┘                 └────────┬────────┘
+                 │                                   │
+                 │                                   ▼
+                 │                         ┌─────────────────┐
+                 │                         │ K-Guard AI      │
+                 │                         │ Security        │
+                 │                         │ Enrichment      │
+                 │                         └────────┬────────┘
+                 │                                   │
+                 └─────────────────┬─────────────────┘
                                    ▼
                          ┌────────────────────┐
-                         │ Security Services  │
-                         │ Wazuh / Kibana     │
+                         │ Native K-Guard UI  │
+                         │ Runtime / Wazuh /  │
+                         │ Sentinel / SRE     │
                          └────────────────────┘
 ```
 
-The browser communicates with the K-Guard backend and does not directly access Wazuh Manager or other protected infrastructure services.
+The browser communicates with the K-Guard backend through authenticated requests.
 
-This architecture keeps service credentials and backend integrations isolated from the user interface.
+Protected infrastructure services and security credentials are not exposed directly to the browser.
+
+K-Guard provides native dashboard pages for runtime security, endpoint visibility, security posture, alerts, and network governance.
 
 ---
 
@@ -112,116 +124,160 @@ This architecture keeps service credentials and backend integrations isolated fr
 
 K-Guard provides a unified interface for:
 
-- Monitoring cluster and workload health.
-- Reviewing runtime-security events.
+- Monitoring cluster health and workload status.
+- Reviewing resource usage and service availability.
+- Reviewing Falco runtime-security detections.
+- Enriching security events through K-Guard AI.
+- Investigating runtime activity from the native Security Runtime page.
 - Reviewing Wazuh endpoint inventory.
-- Viewing Wazuh security posture indicators.
+- Reviewing Wazuh security posture.
 - Reviewing Wazuh alerts.
 - Visualizing network relationships between workloads.
-- Reviewing NetworkPolicy security posture.
-- Managing grouped Sentinel policy operations.
-- Sending notifications through Cisco Webex.
+- Calculating and displaying a network-security score.
+- Reviewing security recommendations.
+- Selecting groups of NetworkPolicies.
+- Targeting selected namespaces.
+- Applying and removing Sentinel-managed policies through explicit confirmation.
+- Sending operational and security notifications through Cisco Webex.
 - Accessing interactive API documentation for administrators and integrators.
 
 ---
 
 ## System Overview
 
-The **System Overview** page provides a high-level view of the monitored Kubernetes environment.
+The **System Overview** page provides a high-level view of the monitored K3s cluster.
 
 It helps administrators review:
 
-- Workload availability.
-- Namespace and application visibility.
+- Namespace and workload visibility.
+- Pod and application status.
 - CPU usage.
 - Memory usage.
 - Pod addresses.
 - Runtime status.
 - Cluster latency.
-- K3s and host information.
+- K3s information.
+- Host operating-system information.
+- Overall infrastructure availability.
 
 ![K-Guard System Overview](frontend/public/screenshots/kguard-system_overview-1.png)
 
-The additional overview screen provides a broader view of monitored services and infrastructure components.
-
 ![K-Guard System Overview Details](frontend/public/screenshots/kguard-system_overview-2.png)
+
+The page is designed to provide a fast operational overview before investigating a specific security or infrastructure area.
 
 ---
 
-## Runtime Security
+## Security Runtime
 
-The **Runtime Security** module provides visibility into suspicious activity detected inside the cluster.
+The **Security Runtime** page provides native visibility into runtime-security events detected inside the K3s cluster.
 
-It is designed around a security-event pipeline based on Falco, Fluent Bit, Elasticsearch, and Kibana.
+The current security pipeline is:
 
-The module provides visibility into:
+```text
+Falco
+  │
+  ▼
+Fluent Bit
+  │
+  ▼
+K-Guard AI
+  │
+  ▼
+K-Guard — Security Runtime
+```
 
-- Runtime security events.
+Falco detects suspicious runtime activity. Fluent Bit forwards the relevant events. K-Guard AI enriches and analyzes the available security context before the information is presented in the native K-Guard dashboard.
+
+The Security Runtime page helps administrators review:
+
 - Suspicious container behavior.
 - Kubernetes-related activity.
 - Falco detections.
-- Event forwarding and storage.
-- Investigation data available through Kibana.
+- AI-enriched security events.
+- Event severity.
+- Affected workloads and containers.
+- Runtime activity trends.
+- Security audit information.
+- Security event distribution.
+- Frequently affected containers.
+- Recent security activity.
 
-![K-Guard Runtime Security](frontend/public/screenshots/kguard-security.png)
+No external Kibana dashboard or ELK interface is required for normal K-Guard runtime-security usage.
 
-![K-Guard Runtime Security Events](frontend/public/screenshots/kguard-security-2.png)
+![K-Guard Security Runtime](frontend/public/screenshots/kguard-security-2.png)
 
-The runtime-security workflow can be represented as follows:
+![K-Guard Security Runtime Details](frontend/public/screenshots/kguard-security.png)
 
-```text
-Runtime activity
-      │
-      ▼
-Falco detection
-      │
-      ▼
-Fluent Bit forwarding
-      │
-      ▼
-Elasticsearch storage
-      │
-      ▼
-Kibana investigation
-```
+The native dashboard provides the main operational views required to understand runtime activity directly inside K-Guard.
 
 ---
 
-## Wazuh Security Monitoring
+## Endpoint & Compliance
 
-K-Guard integrates Wazuh into its security dashboard to provide endpoint inventory, security posture, and alert visibility.
+The **Endpoint & Compliance** page provides native Wazuh visibility directly inside K-Guard.
+
+The current data flow is:
+
+```text
+Wazuh
+  │
+  ▼
+K-Guard Backend
+  │
+  ▼
+K-Guard — Endpoint & Compliance
+```
+
+K-Guard retrieves and normalizes Wazuh information through its backend, then presents the results through its own dashboard.
+
+The Wazuh dashboard is not required for normal K-Guard usage.
+
+Administrators can review:
+
+- Managed endpoint inventory.
+- Active agents.
+- Disconnected agents.
+- Never-connected agents.
+- Endpoint hostname.
+- Agent identifier.
+- Agent version.
+- IP address.
+- Operating system.
+- Architecture.
+- Wazuh agent group.
+- Last keep-alive timestamp.
+- Endpoint status.
+- Security posture indicators.
+- Wazuh alerts.
 
 The integration is read-only from the K-Guard interface.
 
-It helps administrators:
+K-Guard does not use the dashboard to:
 
-- Monitor endpoint availability.
-- Review endpoint operating systems.
-- Review agent status.
-- Identify disconnected endpoints.
-- Review security posture indicators.
-- Investigate recent security alerts.
-- Search monitored assets.
-- Centralize Wazuh visibility with cluster and runtime-security information.
+- Enroll Wazuh agents.
+- Restart Wazuh agents.
+- Modify Wazuh rules.
+- Change Wazuh policies.
+- Expose Wazuh credentials.
+- Expose Wazuh authentication tokens.
 
-Wazuh credentials and authentication tokens remain handled by the K-Guard backend and are not exposed to the browser.
-
-### Security Posture
+### Wazuh Security Posture
 
 The Security Posture view provides a normalized security-focused overview of monitored endpoints.
 
 ![K-Guard Wazuh Security Posture](frontend/public/screenshots/kguard-wazuh-security-posture.png)
 
-### Security Alerts
+### Wazuh Security Alerts
 
 The Alerts view centralizes Wazuh alerts surfaced by the K-Guard backend.
 
-It is designed to help administrators:
+It helps administrators:
 
 - Review active and recent alerts.
 - Identify endpoint-related security events.
 - Review alert activity.
-- Correlate alerts with monitored assets.
+- Correlate alerts with monitored endpoints.
 - Keep Wazuh credentials confined to the backend.
 
 ![K-Guard Wazuh Alerts](frontend/public/screenshots/kguard-wazuh-alerts-1.png)
@@ -232,20 +288,6 @@ It is designed to help administrators:
 
 The Endpoint & Compliance view provides a normalized inventory of monitored Wazuh agents.
 
-It displays information such as:
-
-- Total managed endpoints.
-- Active agents.
-- Disconnected agents.
-- Endpoint hostname.
-- Agent identifier.
-- Agent version.
-- IP address.
-- Operating system.
-- Architecture.
-- Wazuh agent group.
-- Last keep-alive timestamp.
-
 ![K-Guard Wazuh Endpoint Inventory](frontend/public/screenshots/kguard-wazuh-endpoints-1.png)
 
 ![K-Guard Wazuh Endpoint Details](frontend/public/screenshots/kguard-wazuh-endpoints-2.png)
@@ -254,31 +296,39 @@ It displays information such as:
 
 ## Network Sentinel
 
-Network Sentinel is K-Guard's network-security module.
+Network Sentinel is K-Guard's native network-security and micro-segmentation module.
 
-It provides a controlled interface for reviewing the cluster's network-isolation posture and managing groups of Kubernetes NetworkPolicies.
+It helps administrators understand and improve the network-isolation posture of their K3s cluster through a visual interface.
 
-The module helps administrators:
+The module provides:
 
-- Visualize network relationships between workloads.
-- Review the current security posture.
-- Identify security recommendations.
-- Group related network controls.
-- Apply selected policy groups through an explicit confirmation workflow.
-- Reduce unnecessary east-west traffic.
-- Preserve required application and infrastructure flows.
+- Network topology visualization.
+- Workload and namespace relationships.
+- Network-security posture analysis.
+- Security score.
+- Security recommendations.
+- Grouped NetworkPolicy management.
+- Namespace targeting.
+- Explicit confirmation before policy changes.
+- Controlled activation of selected policy groups.
+- Controlled removal of selected policy groups.
+- Protection of Sentinel-managed resources.
 
-![K-Guard Network Sentinel Map](frontend/public/screenshots/kguard-sentinel_map-1.png)
+### Network Map
 
-Additional network views provide different perspectives on workload relationships and network segmentation.
+The Network Map provides a visual representation of workload relationships and application communication paths.
 
-![K-Guard Network Sentinel Map Details](frontend/public/screenshots/kguard-sentinel_map-2.png)
+![K-Guard Sentinel Network Map](frontend/public/screenshots/kguard-sentinel_map-1.png)
 
-![K-Guard Network Sentinel Relationships](frontend/public/screenshots/kguard-sentinel_map-3.png)
+![K-Guard Sentinel Network Map Details](frontend/public/screenshots/kguard-sentinel_map-2.png)
+
+![K-Guard Sentinel Network Relationships](frontend/public/screenshots/kguard-sentinel_map-3.png)
 
 ### Policy Groups
 
-Sentinel groups related policies into logical security domains:
+Sentinel groups related policies into logical security domains.
+
+Available policy groups include:
 
 - Security exceptions.
 - Infrastructure access.
@@ -286,13 +336,17 @@ Sentinel groups related policies into logical security domains:
 - External access.
 - Namespace baseline protection.
 
-This grouped approach makes it easier to review the purpose and scope of a network-security operation before confirming it.
+The interface exposes the number of policies associated with each group and provides a risk classification to support controlled decision-making.
+
+Administrators can select the policy groups relevant to an operation instead of applying an unstructured list of individual policies.
 
 ![K-Guard Sentinel Policies](frontend/public/screenshots/kguard-sentinel_policies.png)
 
-### Security Posture
+### Security Posture and Score
 
-The Sentinel security-posture view helps administrators understand the current level of network isolation and the areas that require attention.
+The Sentinel security-posture view helps administrators understand the current level of network isolation.
+
+The security score provides a concise representation of the current network-security posture and helps identify areas requiring attention.
 
 ![K-Guard Sentinel Security Posture](frontend/public/screenshots/kguard-sentinel_security-posture.png)
 
@@ -300,9 +354,22 @@ The Sentinel security-posture view helps administrators understand the current l
 
 K-Guard can present recommendations intended to support a progressive Zero-Trust approach.
 
+These recommendations help administrators identify potential improvements in workload isolation, policy coverage, and required traffic flows.
+
 ![K-Guard Sentinel Security Recommendations](frontend/public/screenshots/kguard-sentinel_security-recommendations.png)
 
-Network Sentinel is designed to support progressive segmentation rather than an indiscriminate application of network restrictions.
+### Controlled Policy Operations
+
+Network Sentinel supports controlled operations based on:
+
+- Selected policy groups.
+- Selected namespaces.
+- Explicit user confirmation.
+- Sentinel-managed resource protection.
+- Targeted activation.
+- Targeted removal.
+
+This grouped approach helps reduce the risk of applying an unintended cluster-wide change.
 
 Network-policy changes should always be reviewed and tested carefully because they may affect:
 
@@ -313,11 +380,13 @@ Network-policy changes should always be reviewed and tested carefully because th
 - Security services.
 - External integrations.
 
+Network Sentinel is designed to support progressive segmentation rather than an indiscriminate application of network restrictions.
+
 ---
 
 ## Cisco Webex Notifications
 
-K-Guard can send security and operational notifications to a Cisco Webex room.
+K-Guard can send operational and security notifications to a Cisco Webex room.
 
 To configure the integration:
 
@@ -343,12 +412,13 @@ K-Guard is designed around several security principles.
 
 Protected integrations are handled by the K-Guard backend.
 
-The browser does not directly communicate with:
+The browser does not directly access:
 
 - Wazuh Manager.
 - Protected Kubernetes services.
 - Internal security APIs.
 - Credential stores.
+- Security-service authentication tokens.
 
 ### Credential Protection
 
@@ -357,7 +427,7 @@ Sensitive credentials are handled by the backend and must never be committed to 
 This includes:
 
 - Wazuh credentials.
-- Webex tokens.
+- Cisco Webex tokens.
 - Kubernetes credentials.
 - TLS private keys.
 - JWT signing keys.
@@ -367,13 +437,7 @@ This includes:
 
 The Wazuh integration exposed through K-Guard is read-only.
 
-K-Guard does not use the dashboard to:
-
-- Enroll Wazuh agents.
-- Restart Wazuh agents.
-- Modify Wazuh rules.
-- Change Wazuh policies.
-- Expose Wazuh authentication tokens.
+K-Guard does not expose operational Wazuh administration capabilities through its dashboard.
 
 ### Explicit Sentinel Actions
 
@@ -382,6 +446,20 @@ Network Sentinel policy operations require explicit user confirmation.
 The interface supports a review step before applying or removing selected policy groups.
 
 Policy removal is restricted to Sentinel-managed policy resources.
+
+### Progressive Zero-Trust
+
+Network Sentinel is designed around progressive network segmentation.
+
+The objective is to reduce unnecessary east-west traffic while preserving the flows required by:
+
+- DNS.
+- Kubernetes infrastructure.
+- Ingress.
+- Applications.
+- Monitoring.
+- Security services.
+- Approved external integrations.
 
 ### Least Privilege
 
@@ -393,6 +471,7 @@ Before a production deployment, the underlying environment should be reviewed to
 - Access to the dashboard is restricted.
 - Persistent data is backed up.
 - Security integrations are regularly reviewed.
+- Network-policy changes are tested before production use.
 
 ---
 
@@ -458,7 +537,7 @@ http://<your-server-address>
 After signing in, the dashboard provides access to:
 
 - System Overview.
-- Runtime Security.
+- Security Runtime.
 - Endpoint & Compliance.
 - Network Sentinel.
 - Settings.
@@ -472,6 +551,13 @@ The dashboard is designed to centralize the main security and monitoring informa
 Most K-Guard configuration is performed through the web interface.
 
 From the **Settings** page, administrators can configure available integrations such as Cisco Webex and review the connection status of supported security services.
+
+Network Sentinel operations are configured directly from the Sentinel interface through:
+
+- Policy-group selection.
+- Namespace selection.
+- Security-posture review.
+- Explicit confirmation.
 
 Sensitive credentials are handled by the backend and should never be added to:
 
@@ -494,9 +580,11 @@ The documentation is available through:
 http://<your-domain-or-ip>/docs
 ```
 
-The API documentation provides an overview of the available authenticated services and integration endpoints.
+The API documentation provides an overview of authenticated services and integration endpoints.
 
 ![K-Guard API Documentation](frontend/public/screenshots/kguard-docs.png)
+
+API access is protected by K-Guard authentication and is intended for administrative and integration purposes.
 
 ---
 
@@ -512,6 +600,18 @@ Check that:
 - The installation completed successfully.
 - The browser is using the correct dashboard address.
 
+### Security Runtime information is unavailable
+
+Check that:
+
+- The runtime-security integration is configured.
+- Falco is operating correctly.
+- The event-forwarding pipeline is available.
+- K-Guard AI is reachable by the backend.
+- The K-Guard backend is operational.
+
+If the problem persists, contact the person responsible for the K-Guard installation.
+
 ### Wazuh information is unavailable
 
 Check that:
@@ -520,8 +620,6 @@ Check that:
 - The Wazuh services are running.
 - The credentials provided during installation are still valid.
 - The K-Guard backend can reach the Wazuh service.
-
-If the problem persists, contact the person responsible for the K-Guard installation.
 
 ### Webex notifications are not received
 
