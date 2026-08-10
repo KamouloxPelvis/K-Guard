@@ -92,15 +92,15 @@ K-Guard follows a backend-mediated architecture.
                  ┌──────────────┘     └──────────────┐
                  ▼                                   ▼
         ┌─────────────────┐                 ┌─────────────────┐
-        │ Kubernetes / K3s│                 │ Security Inputs │
-        │ Workloads       │                 │ Falco / Wazuh  │
+        │   Kubernetes /  │                 │ Security Inputs │
+        │  K3s Workloads  │                 │  Falco / Wazuh  │
         └────────┬────────┘                 └────────┬────────┘
                  │                                   │
                  │                                   ▼
                  │                         ┌─────────────────┐
-                 │                         │ K-Guard AI      │
-                 │                         │ Security        │
-                 │                         │ Enrichment      │
+                 │                         │    K-Guard AI   │
+                 │                         │     Security    │
+                 │                         │    Enrichment   │
                  │                         └────────┬────────┘
                  │                                   │
                  └─────────────────┬─────────────────┘
