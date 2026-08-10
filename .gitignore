@@ -43,16 +43,12 @@ frontend/tsconfig.app.tsbuildinfo
 
 .backup-before-*/
 
-# Local backups and generated artifacts
-.backup-before-*/
-**/__pycache__/
-*.py[cod]
+# Local backup artifacts
 *.bak
 *.backup
 *.old
 *~
 *.sqlite
-*.sqlite3
 
 # Local runtime database
 backend/data/*.db
