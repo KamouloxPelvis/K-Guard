@@ -648,6 +648,16 @@ Try the following:
 3. Sign out and sign in again.
 4. Contact the person responsible for the K-Guard installation if the issue remains.
 
+## License
+
+K-Guard is released under the [Apache License, Version 2.0](LICENSE).
+
+Copyright © 2026 Kamal Guidadou.
+
+This license permits use, reproduction, modification, and distribution of the project, subject to the conditions described in the license.
+
+K-Guard includes or interacts with third-party components that remain subject to their respective licenses.
+
 ---
 
 ## Contact
