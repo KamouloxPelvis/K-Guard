@@ -1,18 +1,21 @@
+# --- K-Guard Sentinel: Core Infrastructure Allow ---
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
   name: sentinel-infra-allow
   namespace: {{ ns_item }}
+  labels:
+    managed-by: k-guard-sentinel
 spec:
   podSelector: {}
-  policyTypes: ["Ingress", "Egress"]
+  policyTypes:
+    - Ingress
+    - Egress
   egress:
-    # DNS (indispensable)
-    - to: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}}], ports: [{protocol: UDP, port: 53}]
-  ingress:
-    # Autoriser Prometheus à scraper les métriques
-    - from:
-      - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: monitoring}}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
       ports:
-        - protocol: TCP
-          port: 8000 # Le port de tes apps K-Guard
+        - protocol: UDP
+          port: 53

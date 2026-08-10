@@ -40,6 +40,36 @@ interface SecurityCategory {
   unknown: number
 }
 
+interface HardeningPolicy {
+  name: string
+  namespace: string
+  application?: string
+  port?: number
+}
+
+interface HardeningGroup {
+  id: string
+  label: string
+  description: string
+  policies: HardeningPolicy[]
+  count: number
+  risk: 'low' | 'medium' | 'high' | 'critical'
+}
+
+interface HardeningPlan {
+  groups: HardeningGroup[]
+  total_policies: number
+  namespaces: string[]
+  workloads: Array<{
+    app: string
+    namespace: string
+    port: number
+    policy: string
+  }>
+  ordering: string[]
+  read_only: boolean
+}
+
 interface SentinelStatusResponse {
   deployed: boolean
   security_score: number | null
@@ -75,8 +105,10 @@ interface SentinelStatusResponse {
   const showRoleModal = ref(false);
   const selectedPod = ref<PodNode | null>(null);
   const currentViewMode = ref('list');
+  const activeSentinelTab = ref<'map' | 'security' | 'policies'>('map');
   const activeAccordion = ref<string | null>(null);
-  const isHardened = ref(false); // Track the deployment status
+  const isHardened = ref(false);
+  const isDeploying = ref(false);
 
   // --- LOGIC: SECURITY ANALYSIS ---
   const isVulnerable = (pod: PodNode) => {
@@ -93,6 +125,25 @@ interface SentinelStatusResponse {
   const securityCoverage = ref(0);
   const securityConfidence = ref(0);
   const securityAssessedAt = ref('');
+  const hardeningPlan = ref<HardeningPlan | null>(null);
+  const isPlanLoading = ref(false);
+
+  const fetchHardeningPlan = async () => {
+    isPlanLoading.value = true
+
+    try {
+      const response = await api.get<HardeningPlan>(
+        '/sentinel/hardening/plan',
+      )
+
+      hardeningPlan.value = response.data
+    } catch (error) {
+      console.error('Hardening plan unavailable:', error)
+      hardeningPlan.value = null
+    } finally {
+      isPlanLoading.value = false
+    }
+  }
 
   const fetchSentinelStatus = async () => {
     try {
@@ -252,6 +303,46 @@ interface SentinelStatusResponse {
     return `M ${start.x} ${start.y} C ${(start.x + end.x)/2} ${start.y}, ${(start.x + end.x)/2} ${end.y}, ${end.x} ${end.y}`;
   };
 
+  const triggerHarden = async () => {
+    if (!window.confirm(
+      'Deploy hardening policies? This will modify Kubernetes resources.',
+    )) {
+      return
+    }
+
+    isDeploying.value = true
+
+    try {
+      await api.post('/sentinel/activate', {})
+      await fetchSentinelStatus()
+      await fetchNetworkData()
+    } catch (error) {
+      console.error('Sentinel hardening failed:', error)
+    } finally {
+      isDeploying.value = false
+    }
+  }
+
+  const triggerDeactivate = async () => {
+    if (!window.confirm(
+      'Deactivate Sentinel hardening policies? This will modify Kubernetes resources.',
+    )) {
+      return
+    }
+
+    isDeploying.value = true
+
+    try {
+      await api.post('/sentinel/deactivate', {})
+      await fetchSentinelStatus()
+      await fetchNetworkData()
+    } catch (error) {
+      console.error('Sentinel deactivation failed:', error)
+    } finally {
+      isDeploying.value = false
+    }
+  }
+
   const toggleAccordion = (id: string) => {
     activeAccordion.value = activeAccordion.value === id ? null : id;
   };
@@ -263,7 +354,7 @@ interface SentinelStatusResponse {
   
   const init = async () => {
     console.log("DEBUG: Chargement frais des données Sentinel...");
-    await Promise.all([fetchNetworkData(), fetchSentinelStatus()]);
+    await Promise.all([fetchNetworkData(), fetchSentinelStatus(), fetchHardeningPlan()]);
   };
 
   onMounted(async () => {
@@ -286,7 +377,7 @@ interface SentinelStatusResponse {
 </script>
 
   <template>
-    <div class="p-4 lg:p-6 space-y-4 relative max-w-[1600px] mx-auto">
+    <div class="p-4 lg:p-6 relative z-10 font-sans h-full overflow-y-auto custom-scrollbar">
       <!-- Header + controls -->
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
         <div class="xl:col-span-3 bg-[#111217] border border-slate-800/60 rounded-sm p-5">
@@ -351,6 +442,24 @@ interface SentinelStatusResponse {
               >
                 {{ isLoading ? 'Syncing...' : 'Refresh Audit' }}
               </button>
+
+              <button
+                v-if="!isHardened"
+                @click="triggerHarden"
+                :disabled="isDeploying"
+                class="bg-[#f05a28]/10 hover:bg-[#f05a28]/20 disabled:opacity-50 disabled:cursor-not-allowed border border-[#f05a28] text-[#f05a28] px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all"
+              >
+                {{ isDeploying ? 'Deploying...' : 'Deploy hardening' }}
+              </button>
+
+              <button
+                v-else
+                @click="triggerDeactivate"
+                :disabled="isDeploying"
+                class="bg-red-500/10 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed border border-red-500 text-red-400 px-4 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest transition-all"
+              >
+                {{ isDeploying ? 'Processing...' : 'Deactivate policies' }}
+              </button>
             </div>
           </div>
         </div>
@@ -406,8 +515,132 @@ interface SentinelStatusResponse {
         </div>
       </div>
 
+      <!-- Sentinel tabs -->
+      <div class="bg-[#111217] border border-slate-800/60 rounded-sm p-1 flex flex-wrap gap-1">
+        <button
+          @click="activeSentinelTab = 'map'"
+          :class="
+            activeSentinelTab === 'map'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-500 hover:text-slate-300'
+          "
+          class="px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-sm transition-all"
+        >
+          Sentinel Map
+        </button>
+
+        <button
+          @click="activeSentinelTab = 'security'"
+          :class="
+            activeSentinelTab === 'security'
+              ? 'bg-cyan-600 text-white'
+              : 'text-slate-500 hover:text-slate-300'
+          "
+          class="px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-sm transition-all"
+        >
+          Security Posture Findings
+        </button>
+
+        <button
+          @click="activeSentinelTab = 'policies'"
+          :class="
+            activeSentinelTab === 'policies'
+              ? 'bg-orange-600 text-white'
+              : 'text-slate-500 hover:text-slate-300'
+          "
+          class="px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-sm transition-all"
+        >
+          Network Policies
+        </button>
+      </div>
+
+      <!-- Network policy plan -->
+      <section
+        v-if="activeSentinelTab === 'policies'"
+        class="bg-[#111217] border border-slate-800/60 rounded-sm p-4"
+      >
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-[10px] text-slate-300 uppercase font-black tracking-[0.2em]">
+              Network policy deployment plan
+            </h3>
+            <p class="mt-1 text-[8px] text-slate-600 uppercase">
+              Read-only preview before hardening
+            </p>
+          </div>
+
+          <span class="text-[9px] text-cyan-400 font-mono">
+            {{ hardeningPlan?.total_policies ?? 0 }} policies
+          </span>
+        </div>
+
+        <div
+          v-if="isPlanLoading"
+          class="mt-6 text-[9px] text-slate-500 uppercase tracking-widest"
+        >
+          Loading hardening plan...
+        </div>
+
+        <div
+          v-else-if="hardeningPlan"
+          class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3"
+        >
+          <article
+            v-for="group in hardeningPlan.groups"
+            :key="group.id"
+            class="border border-slate-800 bg-[#0b0c10] p-4"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h4 class="text-[10px] text-white uppercase font-black">
+                  {{ group.label }}
+                </h4>
+                <p class="mt-2 text-[9px] text-slate-500 leading-relaxed">
+                  {{ group.description }}
+                </p>
+              </div>
+
+              <span
+                class="text-[8px] uppercase font-bold"
+                :class="
+                  group.risk === 'critical'
+                    ? 'text-red-400'
+                    : group.risk === 'high'
+                      ? 'text-orange-400'
+                      : group.risk === 'medium'
+                        ? 'text-amber-400'
+                        : 'text-emerald-400'
+                "
+              >
+                {{ group.risk }}
+              </span>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <span class="text-[9px] text-slate-500 uppercase">
+                {{ group.count }} policies
+              </span>
+
+              <button
+                disabled
+                class="px-3 py-1.5 text-[8px] uppercase font-bold border border-slate-800 text-slate-600 cursor-not-allowed"
+              >
+                Group selection next
+              </button>
+            </div>
+          </article>
+        </div>
+
+        <p
+          v-else
+          class="mt-6 text-[9px] text-red-400 uppercase tracking-widest"
+        >
+          Hardening plan unavailable.
+        </p>
+      </section>
+
       <!-- Security posture findings -->
-      <section class="bg-[#111217] border border-slate-800/60 rounded-sm p-4">
+      <section v-if="activeSentinelTab === 'security'" class="bg-[#111217] border border-slate-800/60 rounded-sm p-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h3 class="text-[10px] text-slate-300 uppercase font-black tracking-[0.2em]">
@@ -512,7 +745,7 @@ interface SentinelStatusResponse {
 
       <!-- Topology -->
       <div
-        v-if="currentViewMode === 'topology'"
+        v-if="activeSentinelTab === 'map' && currentViewMode === 'topology'"
         class="bg-[#0b0c10] border border-slate-800/60 p-3 rounded-sm relative min-h-[540px] overflow-hidden"
       >
         <div
@@ -613,7 +846,7 @@ interface SentinelStatusResponse {
       </div>
 
       <!-- List -->
-      <div v-if="currentViewMode === 'list'" class="space-y-6">
+      <div v-if="activeSentinelTab === 'map' && currentViewMode === 'list'" class="space-y-6">
         <div
           v-if="isLoading"
           class="bg-[#0b0c10] border border-slate-800/60 rounded-sm p-6 flex items-center justify-center"

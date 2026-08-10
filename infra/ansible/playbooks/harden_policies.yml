@@ -6,6 +6,47 @@
     ansible_python_interpreter: /usr/bin/python3
 
   tasks:
+    - name: "🔎 Discover namespaces"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+      register: ns_list
+
+    - name: "🔎 Discover services"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+      register: service_list
+
+    - name: "📊 Detect monitoring namespace"
+      ansible.builtin.set_fact:
+        monitoring_enabled: >-
+          {{
+            'monitoring' in
+            (
+              ns_list.resources
+              | map(attribute='metadata.name')
+              | list
+            )
+          }}
+
+    - name: "🧩 Build dynamic workload inventory"
+      ansible.builtin.set_fact:
+        discovered_workloads: >-
+          [
+          {% for service in service_list.resources
+             if service.spec.selector is defined
+             and service.spec.selector.app is defined %}
+          {
+            "app": "{{ service.spec.selector.app }}",
+            "ns": "{{ service.metadata.namespace }}",
+            "port": {{
+              service.spec.ports[0].port | default(80)
+            }}
+          }{% if not loop.last %},{% endif %}
+          {% endfor %}
+          ]
+
     # 1. LAYER 0: Enforce Zero Trust
     - name: "🔒 Sentinel: Deploy Deny-All"
       kubernetes.core.k8s:
@@ -37,7 +78,7 @@
     - name: "🔓 Connectivity: Webex API Egress"
       kubernetes.core.k8s:
         state: present
-        definition: "{{ lookup('template', '../templates/webex_egress.j2') }}"
+        definition: "{{ lookup('template', '../templates/exempt_webex.j2') }}"
 
     # 5. UNIVERSAL BRIDGE: Dynamic Internal Bridge
     - name: "🔓 Connectivity: Dynamic Internal Bridge"

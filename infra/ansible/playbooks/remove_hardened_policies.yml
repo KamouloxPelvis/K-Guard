@@ -1,0 +1,31 @@
+---
+- name: "🛡️ K-Guard Sentinel - Remove Managed Policies"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: "🔎 Find Sentinel-managed NetworkPolicies"
+      kubernetes.core.k8s_info:
+        api_version: networking.k8s.io/v1
+        kind: NetworkPolicy
+        label_selectors:
+          - "managed-by=k-guard-sentinel"
+      register: sentinel_policies
+
+    - name: "🗑️ Remove Sentinel-managed NetworkPolicies"
+      kubernetes.core.k8s:
+        state: absent
+        api_version: networking.k8s.io/v1
+        kind: NetworkPolicy
+        name: "{{ item.metadata.name }}"
+        namespace: "{{ item.metadata.namespace }}"
+      loop: "{{ sentinel_policies.resources }}"
+      loop_control:
+        label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+      register: removed_policies
+
+    - name: "📊 Report removal"
+      ansible.builtin.debug:
+        msg:
+          removed: "{{ removed_policies.results | default([]) | length }}"
