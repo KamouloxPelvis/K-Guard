@@ -428,7 +428,16 @@ interface SentinelStatusResponse {
     isDeploying.value = true
 
     try {
-      await api.post('/sentinel/activate', {})
+      await api.post('/sentinel/activate', {
+        groups: [
+          'security-exceptions',
+          'infra-allow',
+          'application-bridges',
+          'external-access',
+          'namespace-baseline',
+        ],
+        namespaces: [],
+      })
       await fetchSentinelStatus()
       await fetchNetworkData()
     } catch (error) {
