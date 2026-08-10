@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-08-10
+
+### Added
+- **Grouped NetworkPolicy Management**: Added grouped Sentinel hardening and policy-removal workflows for controlled Zero-Trust policy management.
+- **Policy Group Selection**: Added frontend controls to select and apply individual Sentinel policy groups.
+- **Namespace Targeting**: Added support for restricting grouped hardening operations to selected Kubernetes namespaces.
+- **Grouped Hardening Playbooks**: Added dedicated Ansible playbooks for grouped policy deployment and removal.
+- **Policy Group Visibility**: Added a read-only Sentinel policy plan exposing policy counts, affected namespaces, workloads, risk levels, and total policy coverage.
+- **Global Hardening Payload**: Added an explicit complete policy-group payload for global Sentinel hardening operations.
+
+### Changed
+- **Sentinel Network Layer**: Extended the backend network manager to support grouped activation and deactivation of Sentinel-managed NetworkPolicies.
+- **Sentinel UI**: Updated the Network Sentinel view to display policy groups, risk levels, policy counts, selected groups, and deployment state.
+- **Policy Lifecycle**: Improved policy removal so that only requested Sentinel-managed policy groups are selected for deletion.
+- **Dashboard Layout**: Stabilized the dashboard page header alignment by removing the sticky positioning that caused the page title banner to jump toward the top of the viewport after loading.
+- **Repository Hygiene**: Removed an obsolete Falco SQL backup, backup files, and generated local artifacts from version control.
+- **Git Ignore Rules**: Added and normalized ignore rules for local backups, Python bytecode, SQLite databases, temporary files, and generated frontend artifacts.
+
+### Security
+- Preserved the Sentinel read-only planning and audit model.
+- Restricted policy removal to resources managed by `k-guard-sentinel`.
+- Preserved explicit confirmation before hardening and deactivation operations from the frontend.
+- Kept namespace and policy-group selection explicit to reduce the risk of unintended cluster-wide changes.
+- Preserved the separation between policy planning, policy application, and policy removal workflows.
+
+### Validation
+- Verified Python compilation for the Sentinel backend modules.
+- Verified successful Vue, TypeScript, and Vite production build.
+- Verified Ansible syntax for grouped hardening and grouped policy-removal playbooks.
+- Verified grouped hardening with Ansible check mode and targeted namespace selection.
+- Verified targeted policy removal selection with Ansible check mode.
+- Verified the complete Sentinel policy plan with 47 policies across 11 namespaces and 11 workloads.
+- Verified that obsolete backups, `.bak` files, Python bytecode, SQLite databases, and generated artifacts are no longer tracked by Git.
+- Verified a clean working tree and successful push of the release branch.
+
 ## [1.6.0] - 2026-07-25
 
 ### Added
