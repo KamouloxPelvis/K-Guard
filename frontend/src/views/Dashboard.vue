@@ -191,7 +191,7 @@
         <img src="/logo_background.png" alt="K-Guard" class="w-[350px] opacity-[0.05] pointer-events-none select-none" />
       </div>
 
-      <header class="h-14 border-b border-slate-800/60 bg-[#111217]/80 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-[45] backdrop-blur-xl">
+      <header class="h-14 shrink-0 border-b border-slate-800/60 bg-[#111217]/80 flex items-center justify-between px-6 lg:px-8 z-[45] backdrop-blur-xl">
         <div class="flex items-center gap-4">
           <button @click="isMenuOpen = !isMenuOpen" class="lg:hidden text-slate-400 hover:text-white p-2 transition-colors cursor-pointer bg-slate-800/30 rounded-sm">
             <span class="text-xl">{{ isMenuOpen ? '✕' : '☰' }}</span>
