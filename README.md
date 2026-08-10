@@ -1,19 +1,31 @@
 # K-Guard
 
-**Current release:** `v1.6.0` — Wazuh Security Posture & Alerts
+**Current release:** `v1.7.0` — Grouped Network Security Policies
 
-> Security governance and observability platform for K3s clusters.
+> A security and monitoring platform that helps protect K3s clusters from a single dashboard.
 
 [![OpenSSF Baseline](https://www.bestpractices.dev/projects/12124/baseline)](https://www.bestpractices.dev/projects/12124)
+
 [![Cisco DevNet Code Exchange](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/KamouloxPelvis/K-Guard)
+
+---
 
 ## ⚠️ Disclaimer
 
-**K-Guard** is engineered in alignment with industry security standards and is published on the Cisco DevNet Code Exchange platform.
+**K-Guard** is engineered in alignment with industry security practices and is published on the Cisco DevNet Code Exchange platform.
 
-However, this software is a personal and experimental Minimum Viable Product (MVP), designed as a research and learning platform for DevSecOps security architectures. It is continuously evolving and must be reviewed, tested, and hardened before being used in a production environment.
+However, K-Guard is a personal and experimental Minimum Viable Product designed as a research and learning platform for DevSecOps security architectures.
 
-K-Guard does not replace a complete SOC process, vulnerability-management program, incident-response plan, or independent security assessment.
+The platform is continuously evolving and must be reviewed, tested, and hardened before being used in a production environment.
+
+K-Guard does not replace:
+
+- A complete Security Operations Center process.
+- A vulnerability-management program.
+- An incident-response plan.
+- A business-continuity strategy.
+- An independent security assessment.
+- Professional Kubernetes and infrastructure administration.
 
 ---
 
@@ -21,18 +33,17 @@ K-Guard does not replace a complete SOC process, vulnerability-management progra
 
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Key Features](#key-features)
-- [Wazuh Endpoint & Compliance](#wazuh-endpoint--compliance)
-- [Wazuh Security Posture & Alerts](#wazuh-security-posture--alerts)
-- [Wazuh Credentials](#wazuh-credentials)
+- [Key Capabilities](#key-capabilities)
+- [System Overview](#system-overview)
 - [Runtime Security](#runtime-security)
+- [Wazuh Security Monitoring](#wazuh-security-monitoring)
 - [Network Sentinel](#network-sentinel)
-- [Cisco Webex Integration](#cisco-webex-integration)
-- [API Documentation](#api-documentation)
+- [Cisco Webex Notifications](#cisco-webex-notifications)
+- [Security Model](#security-model)
 - [Installation](#installation)
 - [Dashboard Access](#dashboard-access)
-- [Security Notes](#security-notes)
+- [Configuration](#configuration)
+- [API Documentation](#api-documentation)
 - [Troubleshooting](#troubleshooting)
 - [Contact](#contact)
 
@@ -40,28 +51,33 @@ K-Guard does not replace a complete SOC process, vulnerability-management progra
 
 ## Overview
 
-K-Guard is a security governance and observability platform for K3s clusters.
+K-Guard is a security governance and observability platform designed to help protect K3s clusters from a single web dashboard.
 
-It centralizes infrastructure health, Kubernetes workload visibility, runtime threat detection, endpoint inventory, security integrations, and selected network-security controls in a single operational dashboard.
+It brings together infrastructure monitoring, runtime security, endpoint visibility, network-security controls, and operational notifications.
 
-K-Guard currently integrates:
+K-Guard is designed for infrastructure and security teams that need a clearer view of their Kubernetes environment without switching continuously between several independent tools.
 
-- **K3s / Kubernetes** for cluster, workload, pod, and infrastructure monitoring
-- **Falco** for runtime detection
-- **Fluent Bit** for log forwarding
-- **Elasticsearch and Kibana** for log storage, search, and SOC visualization
-- **Wazuh** for endpoint inventory and compliance-oriented visibility
-- **Cisco Webex** for ChatOps alerting
-- **Ansible and Kubernetes NetworkPolicies** for Network Sentinel experimentation
+The platform currently integrates:
+
+- **K3s / Kubernetes** for cluster and workload monitoring.
+- **Falco** for runtime threat detection.
+- **Fluent Bit** for log forwarding.
+- **Elasticsearch and Kibana** for event storage and investigation.
+- **Wazuh** for endpoint inventory, security posture, and alert visibility.
+- **Cisco Webex** for operational and security notifications.
+- **Kubernetes NetworkPolicies** for network-isolation controls.
+- **Ansible automation** for controlled Sentinel policy management.
 
 ---
 
 ## Architecture
 
+K-Guard follows a backend-mediated architecture:
+
 ```text
                          ┌────────────────────┐
-                         │   K-Guard UI       │
-                         │ Vue 3 / Tailwind   │
+                         │   K-Guard Web UI   │
+                         │ Vue 3 / TypeScript │
                          └─────────┬──────────┘
                                    │
                                    │ HTTPS / JWT
@@ -75,372 +91,152 @@ K-Guard currently integrates:
           │                        │                        │
           ▼                        ▼                        ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Kubernetes API  │     │ Wazuh Manager   │     │ Elasticsearch   │
-│ K3s workloads   │     │ HTTPS API       │     │ Runtime events  │
-└─────────────────┘     │ Port 55000      │     └─────────────────┘
-                        └─────────────────┘
+│ Kubernetes API  │     │ Wazuh Manager   │     │ Runtime Security│
+│ K3s workloads   │     │ Security data   │     │ Falco / Elastic │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
                                    │
                                    ▼
                          ┌────────────────────┐
-                         │ Wazuh Dashboard    │
-                         │ Endpoint Security  │
+                         │ Security Services  │
+                         │ Wazuh / Kibana     │
                          └────────────────────┘
 ```
 
-The browser never communicates directly with the Wazuh Manager API. K-Guard retrieves Wazuh information from its backend, which keeps Wazuh credentials and Wazuh JWT tokens inside the Kubernetes workload.
+The browser communicates with the K-Guard backend and does not directly access Wazuh Manager or other protected infrastructure services.
+
+This architecture keeps service credentials and backend integrations isolated from the user interface.
 
 ---
 
-## Tech Stack
+## Key Capabilities
 
-### Backend
+K-Guard provides a unified interface for:
 
-- Python 3.11+
-- FastAPI
-- Uvicorn
-- HTTPX
-- Kubernetes Python client
-- SQLite
-- JWT authentication
-- Bcrypt password hashing
-
-### Frontend
-
-- Vue.js 3
-- Vue Router
-- TypeScript
-- Tailwind CSS
-- Native Fetch API
-
-### Security and Observability
-
-- K3s / Kubernetes
-- Falco
-- Fluent Bit
-- Elasticsearch
-- Kibana
-- Wazuh
-- Cisco Webex
-- Ansible Core
-- Kubernetes NetworkPolicies
-
-### Deployment
-
-- Docker
-- GitHub Actions
-- GitHub Container Registry
-- Kubernetes manifests
-- Go-based installer
+- Monitoring cluster and workload health.
+- Reviewing runtime-security events.
+- Reviewing Wazuh endpoint inventory.
+- Viewing Wazuh security posture indicators.
+- Reviewing Wazuh alerts.
+- Visualizing network relationships between workloads.
+- Reviewing NetworkPolicy security posture.
+- Managing grouped Sentinel policy operations.
+- Sending notifications through Cisco Webex.
+- Accessing interactive API documentation for administrators and integrators.
 
 ---
 
-## Key Features
+## System Overview
 
-### System Overview
+The **System Overview** page provides a high-level view of the monitored Kubernetes environment.
 
-The **System Overview** page provides operational visibility into the monitored Kubernetes cluster.
+It helps administrators review:
 
-It displays workload information such as:
-
-- Namespace
-- Pod or workload name
-- CPU usage
-- Memory usage
-- Pod IP address
-- Runtime status
-- Cluster latency
-- K3s and host information
+- Workload availability.
+- Namespace and application visibility.
+- CPU usage.
+- Memory usage.
+- Pod addresses.
+- Runtime status.
+- Cluster latency.
+- K3s and host information.
 
 ![K-Guard System Overview](frontend/public/screenshots/kguard-system_overview-1.png)
 
-### Runtime Observability & Security
+The additional overview screen provides a broader view of monitored services and infrastructure components.
 
-The **Runtime Observability & Security** module integrates Falco runtime alerts with Elasticsearch and Kibana.
-
-It provides:
-
-- Runtime detection visibility
-- Falco alert ingestion
-- Container and Kubernetes behavioral monitoring
-- Elasticsearch-backed event storage
-- Kibana dashboards for investigation and visualization
-
-![K-Guard Runtime SOC](frontend/public/screenshots/kguard-security.png)
-
-### Endpoint & Compliance
-
-The **Endpoint & Compliance** page integrates K-Guard with the Wazuh Manager API.
-
-The first version is intentionally read-only and provides a normalized inventory of monitored Wazuh agents.
-
-It displays:
-
-- Total managed endpoints
-- Active agents
-- Disconnected agents
-- Never-connected agents
-- Endpoint hostname
-- Agent identifier
-- Agent version
-- IP address
-- Operating system
-- Architecture
-- Wazuh agent group
-- Last keep-alive timestamp
-
-The integration is designed so that Wazuh API credentials and short-lived Wazuh JWT tokens remain inside the K-Guard backend pod.
-
-### Network Sentinel
-
-The **Network Sentinel** module is intended to support Zero-Trust network segmentation through Kubernetes `NetworkPolicy` resources and Ansible automation.
-
-Its long-term purpose is to help an administrator:
-
-- Review network-isolation posture
-- Apply controlled baseline policies
-- Restrict unnecessary east-west traffic
-- Preserve required DNS, Kubernetes API, monitoring, ingress, and application flows
-- Audit policy deployment actions
-
-> Network Sentinel should be used carefully. A default-deny policy can disrupt workloads when required traffic is not explicitly allowed.
-
-![K-Guard Network Map](frontend/public/screenshots/kguard-network_map-1.png)
-
-### Cisco Webex ChatOps
-
-K-Guard can send security notifications through Cisco Webex.
-
-The integration is configured in the **Settings** page and stores its settings in the local K-Guard SQLite database.
-
-![K-Guard Settings](frontend/public/screenshots/kguard-settings.png)
+![K-Guard System Overview Details](frontend/public/screenshots/kguard-system_overview-2.png)
 
 ---
 
-## Wazuh Endpoint & Compliance
+## Runtime Security
 
-### Purpose
+The **Runtime Security** module provides visibility into suspicious activity detected inside the cluster.
 
-K-Guard uses the Wazuh Manager API to retrieve endpoint inventory information and expose it in the **Endpoint & Compliance** dashboard page.
+It is designed around a security-event pipeline based on Falco, Fluent Bit, Elasticsearch, and Kibana.
 
-The current integration is read-only. It does not enroll agents, restart agents, modify Wazuh rules, change policies, or expose Wazuh credentials to the browser.
+The module provides visibility into:
 
-### Network Flow
+- Runtime security events.
+- Suspicious container behavior.
+- Kubernetes-related activity.
+- Falco detections.
+- Event forwarding and storage.
+- Investigation data available through Kibana.
 
-```text
-Browser
-  │
-  │ JWT-authenticated request
-  ▼
-K-Guard API
-  │
-  │ HTTPS + Wazuh API credentials
-  ▼
-Wazuh Manager Service
-  │
-  │ GET /agents
-  ▼
-Normalized endpoint inventory
-```
+![K-Guard Runtime Security](frontend/public/screenshots/kguard-security.png)
 
-### Required Kubernetes Resources
+![K-Guard Runtime Security Events](frontend/public/screenshots/kguard-security-2.png)
 
-The K-Guard deployment requires:
-
-- A Wazuh Manager Service exposing port `55000`
-- The `wazuh-manager-credentials` Secret
-- The `wazuh-api-ca` Secret
-- A valid TLS certificate on the Wazuh Manager API
-- DNS SAN entries matching the Kubernetes Service name
-
-The expected Wazuh Manager API URL is:
+The runtime-security workflow can be represented as follows:
 
 ```text
-https://wazuh-manager-service.k-guard.svc.cluster.local:55000
-```
-
-### Required TLS SAN Entries
-
-The Wazuh Manager API certificate should include at least:
-
-```text
-DNS:wazuh-manager-service
-DNS:wazuh-manager-service.k-guard
-DNS:wazuh-manager-service.k-guard.svc
-DNS:wazuh-manager-service.k-guard.svc.cluster.local
-```
-
-K-Guard performs strict TLS certificate validation. Do not configure the integration with `verify=False` or disable hostname validation.
-
-### Wazuh API CA Secret
-
-K-Guard mounts the Wazuh API certificate authority as a read-only Kubernetes Secret.
-
-Expected Secret structure:
-
-```text
-Secret name: wazuh-api-ca
-Key: ca.pem
-Mount path: /etc/kguard/wazuh-api-ca/ca.pem
-```
-
-Verify that the Secret exists:
-
-```bash
-kubectl get secret wazuh-api-ca \
-  -n k-guard \
-  -o jsonpath='{.data}' | jq 'keys'
-```
-
-Expected result:
-
-```text
-[
-  "ca.pem"
-]
-```
-
-### Validate Wazuh API Connectivity
-
-Run this command from the K-Guard pod to validate strict TLS connectivity:
-
-```bash
-POD=$(kubectl get pod -n k-guard \
-  -l app=k-guard \
-  -o jsonpath='{.items.metadata.name}')
-
-kubectl exec -n k-guard "$POD" -- sh -c \
-'python - <<'"'"'PY'"'"'
-import os
-import socket
-import ssl
-
-host = "wazuh-manager-service.k-guard.svc.cluster.local"
-
-context = ssl.create_default_context(
-    cafile=os.environ["WAZUH_API_CA_FILE"]
-)
-
-with socket.create_connection((host, 55000), timeout=5) as raw:
-    with context.wrap_socket(raw, server_hostname=host) as tls:
-        certificate = tls.getpeercert()
-        print("TLS: OK")
-        print("Subject:", certificate.get("subject"))
-        print("Issuer:", certificate.get("issuer"))
-        print("SAN:", certificate.get("subjectAltName"))
-PY'
-```
-
-A successful result should include:
-
-```text
-TLS: OK
-```
-
-### Validate Agent Inventory
-
-The following test authenticates to the Wazuh API and retrieves the number of agents without printing the password or JWT token:
-
-```bash
-POD=$(kubectl get pod -n k-guard \
-  -l app=k-guard \
-  -o jsonpath='{.items.metadata.name}')
-
-kubectl exec -n k-guard "$POD" -- sh -c \
-'python - <<'"'"'PY'"'"'
-import json
-import os
-import ssl
-import urllib.request
-from base64 import b64encode
-
-base_url = os.environ["WAZUH_API_URL"]
-ca_file = os.environ["WAZUH_API_CA_FILE"]
-username = os.environ["WAZUH_API_USERNAME"]
-password = os.environ["WAZUH_API_PASSWORD"]
-
-context = ssl.create_default_context(cafile=ca_file)
-basic = b64encode(f"{username}:{password}".encode()).decode()
-
-auth_request = urllib.request.Request(
-    f"{base_url}/security/user/authenticate?raw=true",
-    headers={"Authorization": f"Basic {basic}"},
-    method="GET",
-)
-
-with urllib.request.urlopen(auth_request, context=context, timeout=10) as response:
-    token = response.read().decode().strip()
-    print("AUTH:", response.status)
-
-agents_request = urllib.request.Request(
-    f"{base_url}/agents?limit=1",
-    headers={"Authorization": f"Bearer {token}"},
-    method="GET",
-)
-
-with urllib.request.urlopen(agents_request, context=context, timeout=10) as response:
-    payload = json.loads(response.read().decode())
-    total = payload.get("data", {}).get("total_affected_items", 0)
-    print("AGENTS:", response.status)
-    print("TOTAL:", total)
-PY'
-```
-
-Expected output:
-
-```text
-AUTH: 200
-AGENTS: 200
-TOTAL: <number_of_agents>
+Runtime activity
+      │
+      ▼
+Falco detection
+      │
+      ▼
+Fluent Bit forwarding
+      │
+      ▼
+Elasticsearch storage
+      │
+      ▼
+Kibana investigation
 ```
 
 ---
 
-## Wazuh Security Posture & Alerts
+## Wazuh Security Monitoring
 
-### Purpose
+K-Guard integrates Wazuh into its security dashboard to provide endpoint inventory, security posture, and alert visibility.
 
-K-Guard uses the Wazuh Manager API to retrieve endpoint inventory, security posture indicators, and alert data, then exposes them in the dashboard.
+The integration is read-only from the K-Guard interface.
 
-The current integration is read-only. It does not enroll agents, restart agents, modify Wazuh rules, change policies, or expose Wazuh credentials to the browser.
+It helps administrators:
+
+- Monitor endpoint availability.
+- Review endpoint operating systems.
+- Review agent status.
+- Identify disconnected endpoints.
+- Review security posture indicators.
+- Investigate recent security alerts.
+- Search monitored assets.
+- Centralize Wazuh visibility with cluster and runtime-security information.
+
+Wazuh credentials and authentication tokens remain handled by the K-Guard backend and are not exposed to the browser.
 
 ### Security Posture
 
 The Security Posture view provides a normalized security-focused overview of monitored endpoints.
 
-It highlights:
-
-- Endpoint posture and compliance signals.
-- Managed agent inventory.
-- State of monitored assets.
-- Read-only security visibility for operational review.
-
 ![K-Guard Wazuh Security Posture](frontend/public/screenshots/kguard-wazuh-security-posture.png)
 
-### Alerts
+### Security Alerts
 
-The Alerts view centralizes Wazuh alerts surfaced by the backend.
+The Alerts view centralizes Wazuh alerts surfaced by the K-Guard backend.
 
-It is designed to help an operator:
+It is designed to help administrators:
 
 - Review active and recent alerts.
-- Investigate endpoint-related security events.
-- Correlate alert volume with endpoint posture.
+- Identify endpoint-related security events.
+- Review alert activity.
+- Correlate alerts with monitored assets.
 - Keep Wazuh credentials confined to the backend.
 
-![K-Guard Wazuh Alerts 1](frontend/public/screenshots/kguard-wazuh-alerts-1.png)
+![K-Guard Wazuh Alerts](frontend/public/screenshots/kguard-wazuh-alerts-1.png)
 
-![K-Guard Wazuh Alerts 2](frontend/public/screenshots/kguard-wazuh-alerts-2.png)
+![K-Guard Wazuh Alert Details](frontend/public/screenshots/kguard-wazuh-alerts-2.png)
 
 ### Endpoint Inventory
 
-The Endpoint & Compliance page provides a normalized inventory of monitored Wazuh agents.
+The Endpoint & Compliance view provides a normalized inventory of monitored Wazuh agents.
 
-It displays:
+It displays information such as:
 
 - Total managed endpoints.
 - Active agents.
 - Disconnected agents.
-- Never-connected agents.
 - Endpoint hostname.
 - Agent identifier.
 - Agent version.
@@ -450,655 +246,309 @@ It displays:
 - Wazuh agent group.
 - Last keep-alive timestamp.
 
-![K-Guard Wazuh Endpoints 1](frontend/public/screenshots/kguard-wazuh-endpoints-1.png)
+![K-Guard Wazuh Endpoint Inventory](frontend/public/screenshots/kguard-wazuh-endpoints-1.png)
 
-![K-Guard Wazuh Endpoints 2](frontend/public/screenshots/kguard-wazuh-endpoints-2.png)
-
----
-
-## Wazuh Credentials
-
-### Important Distinction
-
-K-Guard uses two different authentication layers:
-
-| Authentication layer | Purpose | Used by |
-|---|---|---|
-| K-Guard JWT | Secures the K-Guard dashboard and `/api/*` routes | K-Guard users |
-| Wazuh API credentials | Authenticates K-Guard backend to the Wazuh Manager API | K-Guard backend only |
-| Wazuh Dashboard credentials | Logs into the Wazuh Dashboard web interface | Wazuh administrators |
-
-Do not use the K-Guard administrator password as a Wazuh password unless this is an explicit and documented local decision.
-
-### Create Wazuh API Credentials
-
-The K-Guard backend expects the following Kubernetes Secret:
-
-```text
-Secret name: wazuh-manager-credentials
-Required keys:
-- api-username
-- api-password
-- indexer-username
-- indexer-password
-```
-
-For a new deployment, define strong credentials before applying the Wazuh Manager manifest:
-
-```bash
-export WAZUH_API_USERNAME="kguard-api"
-export WAZUH_API_PASSWORD="CHANGE_THIS_TO_A_STRONG_PASSWORD"
-export WAZUH_INDEXER_USERNAME="admin"
-export WAZUH_INDEXER_PASSWORD="CHANGE_THIS_TO_YOUR_INDEXER_PASSWORD"
-```
-
-Create or update the Secret:
-
-```bash
-kubectl create secret generic wazuh-manager-credentials \
-  -n k-guard \
-  --from-literal=api-username="$WAZUH_API_USERNAME" \
-  --from-literal=api-password="$WAZUH_API_PASSWORD" \
-  --from-literal=indexer-username="$WAZUH_INDEXER_USERNAME" \
-  --from-literal=indexer-password="$WAZUH_INDEXER_PASSWORD" \
-  --dry-run=client -o yaml | kubectl apply -f -
-```
-
-Unset sensitive shell variables after use:
-
-```bash
-unset WAZUH_API_USERNAME
-unset WAZUH_API_PASSWORD
-unset WAZUH_INDEXER_USERNAME
-unset WAZUH_INDEXER_PASSWORD
-```
-
-> Do not commit passwords, certificate private keys, decoded Secrets, `.env` files, or generated kubeconfig files to Git.
-
-### Inspect Available Secret Keys
-
-Before retrieving an existing credential, inspect only the Secret keys:
-
-```bash
-kubectl get secret wazuh-manager-credentials \
-  -n k-guard \
-  -o jsonpath='{.data}' | jq 'keys'
-```
-
-For the Wazuh Dashboard Secret:
-
-```bash
-kubectl get secret wazuh-dashboard-credentials \
-  -n k-guard \
-  -o jsonpath='{.data}' | jq 'keys'
-```
-
-For the Wazuh Indexer administrator password Secret:
-
-```bash
-kubectl get secret wazuh-indexer-admin-password \
-  -n k-guard \
-  -o jsonpath='{.data}' | jq 'keys'
-```
-
-### Retrieve Existing Wazuh API Credentials
-
-Retrieve the API username:
-
-```bash
-kubectl get secret wazuh-manager-credentials \
-  -n k-guard \
-  -o jsonpath='{.data.api-username}' | base64 --decode
-
-echo
-```
-
-Retrieve the API password:
-
-```bash
-kubectl get secret wazuh-manager-credentials \
-  -n k-guard \
-  -o jsonpath='{.data.api-password}' | base64 --decode
-
-echo
-```
-
-Do not paste the output into tickets, chat tools, Git commits, screenshots, shell history, or public documentation.
-
-### Retrieve Wazuh Dashboard Credentials
-
-The exact key names may vary depending on the deployment manifest. First inspect the keys:
-
-```bash
-kubectl get secret wazuh-dashboard-credentials \
-  -n k-guard \
-  -o jsonpath='{.data}' | jq 'keys'
-```
-
-If the Secret uses `username` and `password` keys, retrieve them as follows:
-
-```bash
-kubectl get secret wazuh-dashboard-credentials \
-  -n k-guard \
-  -o jsonpath='{.data.username}' | base64 --decode
-
-echo
-```
-
-```bash
-kubectl get secret wazuh-dashboard-credentials \
-  -n k-guard \
-  -o jsonpath='{.data.password}' | base64 --decode
-
-echo
-```
-
-If the deployment uses a dedicated administrator password Secret with a `password` key:
-
-```bash
-kubectl get secret wazuh-indexer-admin-password \
-  -n k-guard \
-  -o jsonpath='{.data.password}' | base64 --decode
-
-echo
-```
-
-### Change Wazuh Passwords
-
-Use the Wazuh Dashboard user-administration interface or the official Wazuh password-management process to rotate credentials.
-
-When rotating the Wazuh API password used by K-Guard:
-
-1. Update the Wazuh API user password.
-2. Update the `wazuh-manager-credentials` Secret.
-3. Restart the K-Guard deployment.
-4. Validate `/api/wazuh/agents`.
-5. Confirm the Endpoint & Compliance page reconnects successfully.
-
-Restart K-Guard after changing the Secret:
-
-```bash
-kubectl rollout restart deployment/kguard-deployment -n k-guard
-
-kubectl rollout status deployment/kguard-deployment \
-  -n k-guard \
-  --timeout=180s
-```
-
----
-
-## Runtime Security
-
-### Falco, Fluent Bit, Elasticsearch, and Kibana
-
-K-Guard integrates a runtime-security pipeline based on Falco, Fluent Bit, Elasticsearch, and Kibana.
-
-```text
-Falco runtime event
-      │
-      ▼
-Fluent Bit collection and forwarding
-      │
-      ▼
-Elasticsearch indexing
-      │
-      ▼
-Kibana investigation and visualization
-```
-
-The Runtime Observability & Security page is intended to provide operational visibility into runtime activity and stored security events.
-
-![K-Guard Runtime SOC](frontend/public/screenshots/kguard-security.png)
-
-### Access Elasticsearch Credentials
-
-Retrieve the Elasticsearch `elastic` user password:
-
-```bash
-kubectl get secret elasticsearch-es-elastic-user \
-  -n k-guard \
-  -o go-template='{{.data.elastic | base64decode}}'
-
-echo
-```
-
-Store the password securely and do not commit it to Git.
+![K-Guard Wazuh Endpoint Details](frontend/public/screenshots/kguard-wazuh-endpoints-2.png)
 
 ---
 
 ## Network Sentinel
 
-### Purpose
+Network Sentinel is K-Guard's network-security module.
 
-Network Sentinel is the K-Guard network-security module.
+It provides a controlled interface for reviewing the cluster's network-isolation posture and managing groups of Kubernetes NetworkPolicies.
 
-It is intended to apply and manage Kubernetes NetworkPolicies through Ansible automation, supporting a Zero-Trust approach to east-west traffic.
+The module helps administrators:
 
-### NetworkPolicy Requirement
+- Visualize network relationships between workloads.
+- Review the current security posture.
+- Identify security recommendations.
+- Group related network controls.
+- Apply selected policy groups through an explicit confirmation workflow.
+- Reduce unnecessary east-west traffic.
+- Preserve required application and infrastructure flows.
 
-Kubernetes NetworkPolicies only have an effect when the cluster uses a CNI that enforces them.
+![K-Guard Network Sentinel Map](frontend/public/screenshots/kguard-sentinel_map-1.png)
 
-Recommended CNIs include:
+Additional network views provide different perspectives on workload relationships and network segmentation.
 
-- Calico
-- Cilium
-- Kube-router
-- Other NetworkPolicy-capable CNIs
+![K-Guard Network Sentinel Map Details](frontend/public/screenshots/kguard-sentinel_map-2.png)
 
-The default Flannel CNI can keep cluster workloads functional while not enforcing NetworkPolicy resources.
+![K-Guard Network Sentinel Relationships](frontend/public/screenshots/kguard-sentinel_map-3.png)
 
-### Sentinel Policy Components
+### Policy Groups
 
-The infrastructure templates include policies for:
+Sentinel groups related policies into logical security domains:
 
-- Default-deny isolation
-- DNS resolution
-- Kubernetes API access
-- Monitoring access
-- Ingress-controller to application traffic
-- Approved external egress
-- Security-stack exceptions
-- Wazuh and Falco-related connectivity where required
+- Security exceptions.
+- Infrastructure access.
+- Application bridges.
+- External access.
+- Namespace baseline protection.
 
-### Operational Warning
+This grouped approach makes it easier to review the purpose and scope of a network-security operation before confirming it.
 
-Applying default-deny network policies without validating required workload flows can interrupt:
+![K-Guard Sentinel Policies](frontend/public/screenshots/kguard-sentinel_policies.png)
 
-- DNS resolution
-- Ingress traffic
-- Prometheus scraping
-- Grafana access
-- Kubernetes API access
-- Wazuh communication
-- Elasticsearch or Kibana connectivity
-- External API integrations such as Cisco Webex
+### Security Posture
 
-Network Sentinel should therefore be activated only after:
+The Sentinel security-posture view helps administrators understand the current level of network isolation and the areas that require attention.
 
-1. Reviewing namespaces and workloads.
-2. Identifying required ports and service dependencies.
-3. Testing in a non-production environment.
-4. Confirming that the CNI enforces NetworkPolicies.
-5. Preparing a rollback procedure.
+![K-Guard Sentinel Security Posture](frontend/public/screenshots/kguard-sentinel_security-posture.png)
+
+### Security Recommendations
+
+K-Guard can present recommendations intended to support a progressive Zero-Trust approach.
+
+![K-Guard Sentinel Security Recommendations](frontend/public/screenshots/kguard-sentinel_security-recommendations.png)
+
+Network Sentinel is designed to support progressive segmentation rather than an indiscriminate application of network restrictions.
+
+Network-policy changes should always be reviewed and tested carefully because they may affect:
+
+- DNS resolution.
+- Ingress access.
+- Monitoring.
+- Application communication.
+- Security services.
+- External integrations.
 
 ---
 
-## Cisco Webex Integration
+## Cisco Webex Notifications
 
-K-Guard supports Cisco Webex notifications for security and operational alerts.
+K-Guard can send security and operational notifications to a Cisco Webex room.
 
-### Configure Webex
+To configure the integration:
 
 1. Open the **Settings** page.
-2. Enable the Cisco Webex notifier.
+2. Enable Cisco Webex notifications.
 3. Enter the Bot Access Token.
 4. Enter the destination Room ID.
-5. Save the integration.
+5. Save the configuration.
 
-The Webex token is sent to the K-Guard backend and must never be committed to source control.
+The token is handled by the K-Guard backend and must not be shared publicly.
 
-![K-Guard Webex Settings](frontend/public/screenshots/kguard-webex.png)
+![K-Guard Settings](frontend/public/screenshots/kguard-settings.png)
+
+![K-Guard Webex Integration](frontend/public/screenshots/kguard-webex.png)
 
 ---
 
-## API Documentation
+## Security Model
 
-K-Guard exposes interactive OpenAPI documentation through Swagger UI.
+K-Guard is designed around several security principles.
 
-```text
-http://<your-domain-or-ip>/docs
-```
+### Backend-Mediated Integrations
 
-The API documentation includes:
+Protected integrations are handled by the K-Guard backend.
 
-- Authentication and JWT token management
-- K3s infrastructure endpoints
-- Health checks
-- Runtime-security endpoints
-- Wazuh endpoint inventory
-- Integration-management endpoints
+The browser does not directly communicate with:
 
-### Wazuh API Endpoint
+- Wazuh Manager.
+- Protected Kubernetes services.
+- Internal security APIs.
+- Credential stores.
 
-K-Guard exposes a protected endpoint for the Wazuh endpoint inventory:
+### Credential Protection
 
-```text
-GET /api/wazuh/agents
-```
+Sensitive credentials are handled by the backend and must never be committed to the repository or included in screenshots, issue reports, or public documentation.
 
-The request requires a valid K-Guard JWT:
+This includes:
 
-```text
-Authorization: Bearer <kguard-jwt-token>
-```
+- Wazuh credentials.
+- Webex tokens.
+- Kubernetes credentials.
+- TLS private keys.
+- JWT signing keys.
+- Administrator passwords.
 
-The endpoint does not expose:
+### Read-Only Wazuh Integration
 
-- Wazuh API credentials
-- Wazuh JWT tokens
-- Wazuh certificate private keys
-- Kubernetes Secret values
+The Wazuh integration exposed through K-Guard is read-only.
+
+K-Guard does not use the dashboard to:
+
+- Enroll Wazuh agents.
+- Restart Wazuh agents.
+- Modify Wazuh rules.
+- Change Wazuh policies.
+- Expose Wazuh authentication tokens.
+
+### Explicit Sentinel Actions
+
+Network Sentinel policy operations require explicit user confirmation.
+
+The interface supports a review step before applying or removing selected policy groups.
+
+Policy removal is restricted to Sentinel-managed policy resources.
+
+### Least Privilege
+
+Before a production deployment, the underlying environment should be reviewed to ensure that:
+
+- Service permissions are limited to required operations.
+- Unused access rights are removed.
+- Administrative accounts use strong credentials.
+- Access to the dashboard is restricted.
+- Persistent data is backed up.
+- Security integrations are regularly reviewed.
 
 ---
 
 ## Installation
 
-### Prerequisites
+K-Guard is deployed using the installation process provided with the project.
 
-- Debian or Ubuntu Server
-- Root or sudo access
-- x86_64-compatible host
-- K3s cluster
-- Docker or container runtime required by the deployment process
-- Git
-- Python 3 and Pip
-- Kubernetes CLI (`kubectl`)
-- Internet access to retrieve container images
+The installer prepares the required application components and guides the administrator through the initial configuration.
 
-### Install K3s
+### Requirements
 
-```bash
-curl -sfL https://get.k3s.io | sh -
-```
+- Debian or Ubuntu Server.
+- 64-bit compatible system.
+- K3s cluster.
+- Administrator or sudo access.
+- Internet access during installation.
+- A domain name or server address for dashboard access.
 
-### Install Docker
+### Install K-Guard
 
-```bash
-sudo apt update
-sudo apt install -y docker.io
-```
-
-### Clone the Repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/KamouloxPelvis/k-guard.git
-
 cd k-guard
 ```
 
-### Go Installer
-
-The repository includes a Go-based installer intended to:
-
-- Check required dependencies
-- Validate Docker socket availability
-- Generate or synchronize selected secrets
-- Hash local K-Guard credentials with bcrypt
-- Deploy core Kubernetes resources
-
-Run the installer from the relevant installer directory:
+Start the installer:
 
 ```bash
 cd installer
-
 chmod +x kguard-install
-
 sudo ./kguard-install
 ```
 
-> Review the installer source and Kubernetes manifests before running them in an environment containing sensitive workloads.
+Follow the installer instructions to:
 
-### Deploy Wazuh Components
+- Create the initial administrator account.
+- Configure the application.
+- Configure optional security integrations.
+- Prepare the dashboard access address.
 
-Wazuh manifests are located in:
+After installation, open the dashboard using the address configured for the server.
 
-```text
-k8s/wazuh/
-```
-
-Review the manifests, Secrets, storage classes, services, and namespaces before deployment.
-
-Typical deployment flow:
-
-```bash
-cd k8s/wazuh
-
-kubectl apply -f .
-```
-
-Check component status:
-
-```bash
-kubectl get pods -n k-guard
-```
-
-Expected components include:
-
-```text
-wazuh-manager
-wazuh-indexer
-wazuh-dashboard
-wazuh-agent
-kguard-deployment
-falco
-fluent-bit
-elasticsearch
-kibana
-```
+The deployment process and internal infrastructure configuration are intentionally kept separate from normal dashboard usage.
 
 ---
 
 ## Dashboard Access
 
-### K-Guard
-
-Access the K-Guard dashboard through the configured Ingress, node IP, or domain:
-
-```text
-http://<VPS_IP>
-```
-
-or:
+Open K-Guard using the address configured during installation:
 
 ```text
 https://<your-domain>
 ```
 
-### Wazuh Dashboard
-
-The Wazuh Dashboard is exposed through its configured Service or Ingress.
-
-For a NodePort deployment:
+or:
 
 ```text
-http://<your-ip>:5601
+http://<your-server-address>
 ```
 
-Use the Wazuh Dashboard credentials configured in Kubernetes Secrets.
+After signing in, the dashboard provides access to:
 
-### Endpoint & Compliance
+- System Overview.
+- Runtime Security.
+- Endpoint & Compliance.
+- Network Sentinel.
+- Settings.
 
-After logging into K-Guard:
-
-1. Open **Endpoint & Compliance** from the sidebar.
-2. Confirm the status displays `Wazuh API Connected`.
-3. Review agent counts.
-4. Search endpoints by hostname, address, group, operating system, or status.
-5. Use **Refresh** to force a new inventory request.
+The dashboard is designed to centralize the main security and monitoring information in one place.
 
 ---
 
-## CI/CD and Image Tags
+## Configuration
 
-K-Guard is built and deployed through GitHub Actions.
+Most K-Guard configuration is performed through the web interface.
 
-Each deployment publishes two container-image tags:
+From the **Settings** page, administrators can configure available integrations such as Cisco Webex and review the connection status of supported security services.
 
-```text
-ghcr.io/kamouloxpelvis/kguard-app:latest
-ghcr.io/kamouloxpelvis/kguard-app:<git-sha>
-```
+Sensitive credentials are handled by the backend and should never be added to:
 
-Kubernetes deployments should use the immutable Git SHA image tag:
-
-```text
-ghcr.io/kamouloxpelvis/kguard-app:<git-sha>
-```
-
-The `latest` tag is useful for manual testing, but it should not be the primary production deployment reference because it is mutable.
-
-Verify the image currently used by K-Guard:
-
-```bash
-kubectl get deployment kguard-deployment \
-  -n k-guard \
-  -o jsonpath='{.spec.template.spec.containers.image}{"\n"}'
-```
-
-Verify the image digest running in the pod:
-
-```bash
-kubectl get pod -n k-guard -l app=k-guard \
-  -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{.status.containerStatuses.imageID}{"\n"}{end}'
-```
+- The Git repository.
+- Screenshots.
+- Issue reports.
+- Chat messages.
+- Public documentation.
+- Frontend source code.
 
 ---
 
-## Security Notes
+## API Documentation
 
-### Secrets
+K-Guard provides interactive API documentation through Swagger UI for administrators and integrators.
 
-Kubernetes Secrets may contain:
-
-- K-Guard JWT signing keys
-- Administrator hashes
-- Elasticsearch credentials
-- Wazuh API credentials
-- Wazuh Dashboard credentials
-- Webex tokens
-- TLS certificates
-- TLS private keys
-
-Never commit:
+The documentation is available through:
 
 ```text
-.env
-*.pem
-*.key
-kubeconfig.yaml
-decoded Secret values
-password files
-JWT tokens
-Webex tokens
+http://<your-domain-or-ip>/docs
 ```
 
-### Wazuh TLS
+The API documentation provides an overview of the available authenticated services and integration endpoints.
 
-K-Guard validates the Wazuh Manager certificate using a mounted CA file.
-
-Do not weaken the integration by:
-
-```python
-verify=False
-```
-
-Do not disable hostname verification.
-
-### Least Privilege
-
-The current MVP may require Kubernetes permissions for observability and operational controls.
-
-Before a production deployment:
-
-- Review ServiceAccount permissions.
-- Review Roles and ClusterRoles.
-- Remove unused permissions.
-- Remove unused Linux capabilities.
-- Review hostPath mounts.
-- Review Docker socket access.
-- Restrict access to the Kubernetes API.
-- Apply namespace-level network isolation.
-- Rotate default credentials.
-- Enable backups for persistent volumes and application data.
+![K-Guard API Documentation](frontend/public/screenshots/kguard-docs.png)
 
 ---
 
 ## Troubleshooting
 
-### Endpoint & Compliance Is Unavailable
+### The dashboard cannot be reached
 
-Check K-Guard logs:
+Check that:
 
-```bash
-kubectl logs -n k-guard -l app=k-guard --tail=200
-```
+- The server is online.
+- The configured domain points to the correct server.
+- The HTTPS certificate is valid.
+- The installation completed successfully.
+- The browser is using the correct dashboard address.
 
-Check the Wazuh Manager:
+### Wazuh information is unavailable
 
-```bash
-kubectl get pods -n k-guard -l app=wazuh-manager
-```
+Check that:
 
-Check the Wazuh Manager Service:
+- The Wazuh integration is configured.
+- The Wazuh services are running.
+- The credentials provided during installation are still valid.
+- The K-Guard backend can reach the Wazuh service.
 
-```bash
-kubectl get svc wazuh-manager-service -n k-guard
-```
+If the problem persists, contact the person responsible for the K-Guard installation.
 
-Check the Wazuh CA Secret:
+### Webex notifications are not received
 
-```bash
-kubectl get secret wazuh-api-ca -n k-guard
-```
+Check that:
 
-Check the Wazuh credentials Secret:
+- Cisco Webex is enabled in **Settings**.
+- The Bot Access Token is valid.
+- The Room ID is correct.
+- The Webex room accepts messages from the configured bot.
 
-```bash
-kubectl get secret wazuh-manager-credentials -n k-guard
-```
+### Network Sentinel data is unavailable
 
-### New Frontend Features Do Not Appear
+Check that:
 
-Confirm the Deployment image:
+- The cluster is reachable.
+- The required security services are operational.
+- The network-security integration is correctly configured.
+- The requested operation was confirmed in the interface.
 
-```bash
-kubectl get deployment kguard-deployment \
-  -n k-guard \
-  -o jsonpath='{.spec.template.spec.containers.image}{"\n"}'
-```
+### A new feature is not visible
 
-Inspect whether the deployed frontend bundle contains the expected feature text:
+Try the following:
 
-```bash
-POD=$(kubectl get pod -n k-guard \
-  -l app=k-guard \
-  -o jsonpath='{.items.metadata.name}')
-
-kubectl exec -n k-guard "$POD" -- sh -c \
-'grep -Ril "Endpoint & Compliance\|Wazuh Inventory" /app/static 2>/dev/null | head'
-```
-
-If no result is returned:
-
-- Confirm the feature files are committed.
-- Confirm GitHub Actions built the correct commit.
-- Confirm the Deployment uses the SHA generated by that workflow run.
-- Confirm the Docker build context includes `frontend/`.
-- Confirm the frontend build completes successfully.
-
-### Check Current Pods
-
-```bash
-kubectl get pods -n k-guard
-```
-
-### Check K-Guard Rollout
-
-```bash
-kubectl rollout status deployment/kguard-deployment \
-  -n k-guard \
-  --timeout=180s
-```
-
-### Restart K-Guard
-
-```bash
-kubectl rollout restart deployment/kguard-deployment -n k-guard
-
-kubectl rollout status deployment/kguard-deployment \
-  -n k-guard \
-  --timeout=180s
-```
+1. Refresh the page.
+2. Clear the browser cache.
+3. Sign out and sign in again.
+4. Contact the person responsible for the K-Guard installation if the issue remains.
 
 ---
 
