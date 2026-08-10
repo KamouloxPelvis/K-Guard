@@ -135,6 +135,13 @@ interface SentinelStatusResponse {
   const securityAssessedAt = ref('');
   const hardeningPlan = ref<HardeningPlan | null>(null);
   const isPlanLoading = ref(false);
+  const selectedPolicyGroups = ref<string[]>([
+    'security-exceptions',
+    'infra-allow',
+    'application-bridges',
+    'external-access',
+    'namespace-baseline',
+  ]);
 
   const fetchHardeningPlan = async () => {
     isPlanLoading.value = true
@@ -363,6 +370,54 @@ interface SentinelStatusResponse {
     return `M ${start.x} ${start.y} C ${(start.x + end.x)/2} ${start.y}, ${(start.x + end.x)/2} ${end.y}, ${end.x} ${end.y}`;
   };
 
+  const togglePolicyGroup = (groupId: string) => {
+    if (selectedPolicyGroups.value.includes(groupId)) {
+      selectedPolicyGroups.value = selectedPolicyGroups.value.filter(
+        group => group !== groupId,
+      )
+      return
+    }
+
+    selectedPolicyGroups.value = [
+      ...selectedPolicyGroups.value,
+      groupId,
+    ]
+  }
+
+  const applySelectedPolicyGroups = async () => {
+    if (!selectedPolicyGroups.value.length) {
+      window.alert('Select at least one NetworkPolicy group.')
+      return
+    }
+
+    const hasBaseline = selectedPolicyGroups.value.includes(
+      'namespace-baseline',
+    )
+
+    const warning = hasBaseline
+      ? 'The namespace baseline includes default-deny policies. Continue?'
+      : 'Apply the selected NetworkPolicy groups?'
+
+    if (!window.confirm(warning)) {
+      return
+    }
+
+    isDeploying.value = true
+
+    try {
+      await api.post('/sentinel/activate', {
+        groups: selectedPolicyGroups.value,
+        namespaces: [],
+      })
+
+      await init()
+    } catch (error) {
+      console.error('Grouped Sentinel hardening failed:', error)
+    } finally {
+      isDeploying.value = false
+    }
+  }
+
   const triggerHarden = async () => {
     if (!window.confirm(
       'Deploy hardening policies? This will modify Kubernetes resources.',
@@ -373,7 +428,16 @@ interface SentinelStatusResponse {
     isDeploying.value = true
 
     try {
-      await api.post('/sentinel/activate', {})
+      await api.post('/sentinel/activate', {
+        groups: [
+          'security-exceptions',
+          'infra-allow',
+          'application-bridges',
+          'external-access',
+          'namespace-baseline',
+        ],
+        namespaces: [],
+      })
       await fetchSentinelStatus()
       await fetchNetworkData()
     } catch (error) {
@@ -393,7 +457,16 @@ interface SentinelStatusResponse {
     isDeploying.value = true
 
     try {
-      await api.post('/sentinel/deactivate', {})
+      await api.post('/sentinel/deactivate', {
+        groups: [
+          'security-exceptions',
+          'infra-allow',
+          'application-bridges',
+          'external-access',
+          'namespace-baseline',
+        ],
+        namespaces: [],
+      })
       await fetchSentinelStatus()
       await fetchNetworkData()
     } catch (error) {
@@ -693,14 +766,39 @@ interface SentinelStatusResponse {
                 {{ group.count }} policies
               </span>
 
-              <button
-                disabled
-                class="px-3 py-1.5 text-[8px] uppercase font-bold border border-slate-800 text-slate-600 cursor-not-allowed"
-              >
-                Group selection next
-              </button>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="selectedPolicyGroups.includes(group.id)"
+                  @change="togglePolicyGroup(group.id)"
+                  class="accent-orange-500"
+                />
+                <span class="text-[8px] uppercase font-bold text-orange-400">
+                  Select
+                </span>
+              </label>
             </div>
           </article>
+        </div>
+
+        <div
+          v-if="hardeningPlan"
+          class="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-800 pt-4"
+        >
+          <p class="text-[8px] text-slate-600 uppercase">
+            Selected groups:
+            <span class="text-orange-400">
+              {{ selectedPolicyGroups.length }}
+            </span>
+          </p>
+
+          <button
+            @click="applySelectedPolicyGroups"
+            :disabled="isDeploying || !selectedPolicyGroups.length"
+            class="bg-orange-500/10 hover:bg-orange-500/20 disabled:opacity-40 border border-orange-500 text-orange-400 px-4 py-2 text-[9px] font-black uppercase tracking-widest"
+          >
+            {{ isDeploying ? 'Applying...' : 'Apply selected groups' }}
+          </button>
         </div>
 
         <p

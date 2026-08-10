@@ -3,8 +3,10 @@ import logging
 import asyncio
 import os
 import shutil
+import json
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from fastapi.responses import JSONResponse
 from typing import Dict, Any
 from kubernetes import client, config
@@ -14,6 +16,22 @@ from backend.routers.auth import verify_token
 
 router = APIRouter(tags=["Network Sentinel"])
 
+
+ALLOWED_HARDENING_GROUPS = {
+    "security-exceptions",
+    "infra-allow",
+    "application-bridges",
+    "external-access",
+    "namespace-baseline",
+}
+
+
+class HardeningRequest(BaseModel):
+    groups: list[str] = Field(default_factory=lambda: sorted(ALLOWED_HARDENING_GROUPS))
+    namespaces: list[str] = Field(default_factory=list)
+
+
+
 # --- CONFIGURATION ---
 # Note: In a production environment, avoid executing ansible-playbook from within a pod.
 # Consider using an Ansible Operator or a dedicated CI/CD trigger instead.
@@ -22,7 +40,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ANSIBLE_PATH = Path(
     os.getenv(
         "SENTINEL_ANSIBLE_PATH",
-        str(PROJECT_ROOT / "infra/ansible/playbooks/harden_policies.yml"),
+        str(PROJECT_ROOT / "infra/ansible/playbooks/harden_policies_grouped.yml"),
     )
 )
 
@@ -31,7 +49,7 @@ REMOVE_ANSIBLE_PATH = Path(
         "SENTINEL_REMOVE_ANSIBLE_PATH",
         str(
             PROJECT_ROOT
-            / "infra/ansible/playbooks/remove_hardened_policies.yml"
+            / "infra/ansible/playbooks/remove_hardened_policies_grouped.yml"
         ),
     )
 )
@@ -86,11 +104,32 @@ async def get_network_policy_status():
         )
 
 
-async def _run_sentinel_playbook(playbook_path: Path) -> dict[str, Any]:
+async def _run_sentinel_playbook(
+    playbook_path: Path,
+    request: HardeningRequest,
+) -> dict[str, Any]:
     if not playbook_path.is_file():
         raise HTTPException(
             status_code=500,
             detail=f"Sentinel playbook not found: {playbook_path}",
+        )
+
+    invalid_groups = set(request.groups) - ALLOWED_HARDENING_GROUPS
+
+    if invalid_groups:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported hardening group",
+                "groups": sorted(invalid_groups),
+                "allowed": sorted(ALLOWED_HARDENING_GROUPS),
+            },
+        )
+
+    if not request.groups:
+        raise HTTPException(
+            status_code=422,
+            detail="At least one hardening group must be selected",
         )
 
     ansible_binary = shutil.which("ansible-playbook")
@@ -101,12 +140,23 @@ async def _run_sentinel_playbook(playbook_path: Path) -> dict[str, Any]:
             detail="ansible-playbook is not available",
         )
 
+    extra_vars = json.dumps(
+        {
+            "enabled_groups": request.groups,
+            "target_namespaces": request.namespaces,
+        }
+    )
+
     command = [
         ansible_binary,
         "-i",
         "localhost,",
         "-c",
         "local",
+        "-e",
+        f"ansible_python_interpreter={PROJECT_ROOT / '.venv/bin/python'}",
+        "-e",
+        extra_vars,
         str(playbook_path),
     ]
 
@@ -137,6 +187,8 @@ async def _run_sentinel_playbook(playbook_path: Path) -> dict[str, Any]:
         "stdout": stdout.decode("utf-8", errors="replace")[-12000:],
         "stderr": stderr.decode("utf-8", errors="replace")[-12000:],
         "playbook": str(playbook_path),
+        "groups": request.groups,
+        "namespaces": request.namespaces,
     }
 
     if process.returncode != 0:
@@ -149,8 +201,14 @@ async def _run_sentinel_playbook(playbook_path: Path) -> dict[str, Any]:
 
 
 @router.post("/sentinel/activate")
-async def activate_sentinel(user: dict = Depends(verify_token)):
-    result = await _run_sentinel_playbook(ANSIBLE_PATH)
+async def activate_sentinel(
+    request: HardeningRequest,
+    user: dict = Depends(verify_token),
+):
+    result = await _run_sentinel_playbook(
+        ANSIBLE_PATH,
+        request,
+    )
 
     audit = await asyncio.to_thread(audit_cluster_security)
 
@@ -162,8 +220,14 @@ async def activate_sentinel(user: dict = Depends(verify_token)):
 
 
 @router.post("/sentinel/deactivate")
-async def deactivate_sentinel(user: dict = Depends(verify_token)):
-    result = await _run_sentinel_playbook(REMOVE_ANSIBLE_PATH)
+async def deactivate_sentinel(
+    request: HardeningRequest,
+    user: dict = Depends(verify_token),
+):
+    result = await _run_sentinel_playbook(
+        REMOVE_ANSIBLE_PATH,
+        request,
+    )
 
     audit = await asyncio.to_thread(audit_cluster_security)
 

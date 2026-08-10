@@ -1,0 +1,137 @@
+---
+- name: "🛡️ K-Guard Sentinel - Grouped Hardening"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    enabled_groups:
+      - security-exceptions
+      - infra-allow
+      - application-bridges
+      - external-access
+      - namespace-baseline
+
+    target_namespaces: []
+
+  tasks:
+    - name: "🔎 Discover namespaces"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+      register: ns_list
+
+    - name: "🔎 Discover services"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+      register: service_list
+
+    - name: "📊 Detect monitoring namespace"
+      ansible.builtin.set_fact:
+        monitoring_enabled: >-
+          {{
+            'monitoring' in
+            (
+              ns_list.resources
+              | map(attribute='metadata.name')
+              | list
+            )
+          }}
+
+    - name: "🧩 Build dynamic workload inventory"
+      ansible.builtin.set_fact:
+        discovered_workloads: >-
+          [
+          {% for service in service_list.resources
+             if service.spec.selector is defined
+             and service.spec.selector.app is defined %}
+          {
+            "app": "{{ service.spec.selector.app }}",
+            "ns": "{{ service.metadata.namespace }}",
+            "port": {{
+              service.spec.ports[0].port | default(80)
+            }}
+          }{% if not loop.last %},{% endif %}
+          {% endfor %}
+          ]
+
+    # 1. Security exceptions
+    - name: "🛡️ Apply security stack exception"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/exempt_stack.j2') }}"
+      when:
+        - "'security-exceptions' in enabled_groups"
+        - target_namespaces | length == 0 or 'k-guard' in target_namespaces
+
+    # 2. Infrastructure allow rules
+    - name: "🌐 Apply infrastructure allow rules"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/infra_allow.j2') }}"
+      vars:
+        ns_item: "{{ item.metadata.name }}"
+      loop: "{{ ns_list.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+      when:
+        - "'infra-allow' in enabled_groups"
+        - target_namespaces | length == 0 or item.metadata.name in target_namespaces
+
+    # 3. Application bridges
+    - name: "🔓 Apply internal application bridge"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/app_internal_bridge.j2') }}"
+      vars:
+        app_name: "sentinel-{{ item.app }}-internal-bridge"
+        namespace: "{{ item.ns }}"
+        app_label: "{{ item.app }}"
+        app_port: "{{ item.port | default(80) }}"
+      loop: "{{ discovered_workloads }}"
+      loop_control:
+        label: "{{ item.ns }}/{{ item.app }}"
+      when:
+        - "'application-bridges' in enabled_groups"
+        - target_namespaces | length == 0 or item.ns in target_namespaces
+
+    # 4. External access
+    - name: "🔓 Apply Webex egress exception"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/exempt_webex.j2') }}"
+      when:
+        - "'external-access' in enabled_groups"
+        - target_namespaces | length == 0 or 'k-guard' in target_namespaces
+
+    - name: "🔓 Apply MongoDB Atlas egress exception"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/app_egress.j2') }}"
+      vars:
+        app_name: "sentinel-blog-db-access"
+        namespace: "blog-prod"
+        app_label: "blog-devopsnotes"
+        egress_rules:
+          - cidr: "0.0.0.0/0"
+            port: 27017
+            protocol: TCP
+      when:
+        - "'external-access' in enabled_groups"
+        - target_namespaces | length == 0 or 'blog-prod' in target_namespaces
+        - "'blog-devopsnotes' in (discovered_workloads | map(attribute='app') | list)"
+
+    # 5. Namespace baseline, deliberately applied last
+    - name: "🔒 Apply namespace baseline"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/core_baseline.j2') }}"
+      vars:
+        ns_item: "{{ item.metadata.name }}"
+      loop: "{{ ns_list.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+      when:
+        - "'namespace-baseline' in enabled_groups"
+        - target_namespaces | length == 0 or item.metadata.name in target_namespaces

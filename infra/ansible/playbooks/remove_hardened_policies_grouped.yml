@@ -1,0 +1,91 @@
+---
+- name: "🛡️ K-Guard Sentinel - Grouped Policy Removal"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    enabled_groups:
+      - security-exceptions
+      - infra-allow
+      - application-bridges
+      - external-access
+      - namespace-baseline
+
+    target_namespaces: []
+
+  tasks:
+    - name: "🔎 Find Sentinel-managed NetworkPolicies"
+      kubernetes.core.k8s_info:
+        api_version: networking.k8s.io/v1
+        kind: NetworkPolicy
+        label_selectors:
+          - "managed-by=k-guard-sentinel"
+      register: sentinel_policies
+
+    - name: "🧩 Select requested policies"
+      ansible.builtin.set_fact:
+        selected_policies: >-
+          {{
+            selected_policies | default([]) + [item]
+          }}
+      loop: "{{ sentinel_policies.resources }}"
+      loop_control:
+        label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+      when:
+        - target_namespaces | length == 0 or item.metadata.namespace in target_namespaces
+        - >-
+          (
+            (
+              item.metadata.name in [
+                'sentinel-exempt-stack'
+              ]
+              and 'security-exceptions' in enabled_groups
+            )
+            or
+            (
+              item.metadata.name in [
+                'sentinel-infra-allow'
+              ]
+              and 'infra-allow' in enabled_groups
+            )
+            or
+            (
+              item.metadata.name.endswith('-internal-bridge')
+              and 'application-bridges' in enabled_groups
+            )
+            or
+            (
+              item.metadata.name in [
+                'sentinel-webex-egress',
+                'sentinel-blog-db-access'
+              ]
+              and 'external-access' in enabled_groups
+            )
+            or
+            (
+              item.metadata.name in [
+                'sentinel-default-deny',
+                'sentinel-core-infra'
+              ]
+              and 'namespace-baseline' in enabled_groups
+            )
+          )
+
+    - name: "🗑️ Remove selected Sentinel policies"
+      kubernetes.core.k8s:
+        state: absent
+        api_version: networking.k8s.io/v1
+        kind: NetworkPolicy
+        name: "{{ item.metadata.name }}"
+        namespace: "{{ item.metadata.namespace }}"
+      loop: "{{ selected_policies | default([]) }}"
+      loop_control:
+        label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+      register: removed_policies
+
+    - name: "📊 Report removal"
+      ansible.builtin.debug:
+        msg:
+          selected: "{{ selected_policies | default([]) | length }}"
+          removed: "{{ removed_policies.results | default([]) | length }}"
