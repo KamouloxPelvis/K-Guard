@@ -1,0 +1,23 @@
+# --- K-Guard Sentinel: CoreDNS External DNS Egress ---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: sentinel-coredns-egress
+  namespace: kube-system
+  labels:
+    managed-by: k-guard-sentinel
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: kube-dns
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
