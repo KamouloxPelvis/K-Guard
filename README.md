@@ -38,16 +38,33 @@ K-Guard does not replace:
 - [System Overview](#system-overview)
 - [Security Runtime](#security-runtime)
 - [Endpoint & Compliance](#endpoint--compliance)
+  - [Wazuh Security Posture](#wazuh-security-posture)
+  - [Wazuh Security Alerts](#wazuh-security-alerts)
+  - [Endpoint Inventory](#endpoint-inventory)
 - [Network Sentinel](#network-sentinel)
+  - [Network Map](#network-map)
+  - [Policy Groups](#policy-groups)
+  - [Security Posture and Score](#security-posture-and-score)
+  - [Security Recommendations](#security-recommendations)
+  - [Controlled Policy Operations](#controlled-policy-operations)
 - [Cisco Webex Notifications](#cisco-webex-notifications)
 - [Security Model](#security-model)
+  - [Backend-Mediated Integrations](#backend-mediated-integrations)
+  - [Credential Protection](#credential-protection)
+  - [Read-Only Wazuh Integration](#read-only-wazuh-integration)
+  - [Explicit Sentinel Actions](#explicit-sentinel-actions)
+  - [Progressive Zero-Trust](#progressive-zero-trust)
+  - [Least Privilege](#least-privilege)
 - [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Install K-Guard](#install-k-guard)
 - [Dashboard Access](#dashboard-access)
 - [Configuration](#configuration)
 - [API Documentation](#api-documentation)
 - [Troubleshooting](#troubleshooting)
+- [Articles & Experiments](#articles--experiments)
+- [License](#license)
 - [Contact](#contact)
-
 ---
 
 ## Overview
@@ -647,6 +664,17 @@ Try the following:
 2. Clear the browser cache.
 3. Sign out and sign in again.
 4. Contact the person responsible for the K-Guard installation if the issue remains.
+
+## Articles & Experiments
+
+K-Guard is developed through continuous experimentation around Kubernetes/K3s
+security, observability, runtime protection, and network governance.
+
+The following DevOpsNotes articles document some of these experiments and
+major project milestones:
+
+- [K-Guard v1.7.0 — Security by Design, Runtime Security & Network Governance](https://blog.devopsnotes.org/articles/TON-SLUG)
+- [K-Guard — De l'Audit SRE à la Défense Active (Zero Trust) sur Kubernetes](https://blog.devopsnotes.org/articles/TON-SLUG)
 
 ## License
 

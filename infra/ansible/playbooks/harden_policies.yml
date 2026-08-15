@@ -6,6 +6,9 @@
     ansible_python_interpreter: /usr/bin/python3
 
   tasks:
+    # ------------------------------------------------------------------------
+    # 0. DISCOVERY
+    # ------------------------------------------------------------------------
     - name: "🔎 Discover namespaces"
       kubernetes.core.k8s_info:
         api_version: v1
@@ -47,8 +50,10 @@
           {% endfor %}
           ]
 
-    # 1. LAYER 0: Enforce Zero Trust
-    - name: "🔒 Sentinel: Deploy Deny-All"
+    # ------------------------------------------------------------------------
+    # 1. LAYER 0: Enforce Zero Trust (default deny) - all namespaces
+    # ------------------------------------------------------------------------
+    - name: "🔒 Sentinel: Deploy Deny-All (Core Baseline)"
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('template', '../templates/core_baseline.j2') }}"
@@ -56,31 +61,47 @@
         ns_item: "{{ item.metadata.name }}"
       loop: "{{ ns_list.resources }}"
 
-    # 2. LAYER 1: Common infra (DNS, API, Monitoring)
+    # ------------------------------------------------------------------------
+    # 2. LAYER 1: Common infra (DNS, API, Monitoring) - all namespaces
+    # ------------------------------------------------------------------------
     - name: "🌐 Sentinel: Deploy Infra-Allowed"
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('template', '../templates/infra_allow.j2') }}"
       vars:
         ns_item: "{{ item.metadata.name }}"
-        monitoring_enabled: "{{ 'monitoring' in (ns_list.resources | map(attribute='metadata.name') | list) }}"
+        monitoring_enabled: "{{ monitoring_enabled }}"
       loop: "{{ ns_list.resources }}"
 
-    # 3. LAYER 2: Exemption for security stack
-    - name: "🛡️ Sentinel: Exempt Security Stack"
+    # ------------------------------------------------------------------------
+    # 2.5 LAYER 1.2: kube-system - CoreDNS external egress
+    # ------------------------------------------------------------------------
+    - name: "🌐 Sentinel: Allow CoreDNS external DNS egress (kube-system)"
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', '../templates/core_dns_egress.j2') }}"
+
+    # ------------------------------------------------------------------------
+    # 3. LAYER 2: Exemption for security stack (k-guard)
+    # ------------------------------------------------------------------------
+    - name: "🛡️ Sentinel: Exempt Security Stack (k-guard)"
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('template', '../templates/exempt_stack.j2') }}"
       vars:
         ns_item: "k-guard"
 
-    # 4. INTEGRATIONS: Webex API Egress
+    # ------------------------------------------------------------------------
+    # 4. INTEGRATIONS: Webex API egress
+    # ------------------------------------------------------------------------
     - name: "🔓 Connectivity: Webex API Egress"
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('template', '../templates/exempt_webex.j2') }}"
 
-    # 5. UNIVERSAL BRIDGE: Dynamic Internal Bridge
+    # ------------------------------------------------------------------------
+    # 5. UNIVERSAL BRIDGE: Dynamic internal service-to-service bridge
+    # ------------------------------------------------------------------------
     - name: "🔓 Connectivity: Dynamic Internal Bridge"
       kubernetes.core.k8s:
         state: present
@@ -91,10 +112,12 @@
         app_label: "{{ item.app }}"
         app_port: "{{ item.port | default(80) }}"
       loop: "{{ discovered_workloads }}"
-      when: "item.app is defined"
+      when: item.app is defined
 
-    # 6. EXTERNAL SERVICES: Database Access
-    - name: "🔓 Connectivity: MongoDB Atlas Egress"
+    # ------------------------------------------------------------------------
+    # 6. EXTERNAL SERVICES: Blog MongoDB Atlas egress
+    # ------------------------------------------------------------------------
+    - name: "🔓 Connectivity: MongoDB Atlas Egress (blog-devopsnotes)"
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('template', '../templates/app_egress.j2') }}"
@@ -102,10 +125,15 @@
         app_name: "sentinel-blog-db-access"
         namespace: "blog-prod"
         app_label: "blog-devopsnotes"
-        egress_rules: [{ cidr: "0.0.0.0/0", port: 27017, protocol: "TCP" }]
+        egress_rules:
+          - cidr: "0.0.0.0/0"
+            port: 27017
+            protocol: "TCP"
       when: "'blog-devopsnotes' in (discovered_workloads | map(attribute='app') | list)"
 
-    # 7. AUDIT: Calculate Security Score and push to file for API
+    # ------------------------------------------------------------------------
+    # 7. AUDIT: Calculate security score and expose to K-Guard API
+    # ------------------------------------------------------------------------
     - name: "📊 Audit: Calculate and Save Security Score"
       shell: |
         TOTAL=$(kubectl get ns --no-headers | wc -l)
