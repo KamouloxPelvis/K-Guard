@@ -2,29 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.sentinel_audit import (
-    _load_kubernetes_config,
-    _read_raw_list,
-)
+from backend.sentinel_audit import _load_kubernetes_config
 from kubernetes import client
 
 
 def build_hardening_plan() -> dict[str, Any]:
     _load_kubernetes_config()
 
-    api_client = client.ApiClient()
+    core_v1 = client.CoreV1Api()
 
-    namespaces = _read_raw_list(
-        api_client,
-        "/api/v1/namespaces",
-        "V1Namespace",
-    )
-
-    services = _read_raw_list(
-        api_client,
-        "/api/v1/services",
-        "V1Service",
-    )
+    namespaces = core_v1.list_namespace().items
+    services = core_v1.list_service_for_all_namespaces().items
 
     namespace_names = sorted(
         namespace.metadata.name

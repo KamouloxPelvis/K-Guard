@@ -9,49 +9,12 @@ from typing import Any
 from kubernetes import client, config
 
 
+
 def _load_kubernetes_config() -> None:
     try:
         config.load_incluster_config()
     except config.ConfigException:
         config.load_kube_config()
-
-
-def _read_raw_list(
-    api_client: client.ApiClient,
-    path: str,
-    model_name: str,
-) -> list[Any]:
-    response, status, _headers = api_client.call_api(
-        path,
-        "GET",
-        response_type=None,
-        auth_settings=["BearerToken"],
-        _return_http_data_only=False,
-        _preload_content=False,
-    )
-
-    if status != 200:
-        raise RuntimeError(
-            f"Kubernetes GET {path} returned HTTP {status}"
-        )
-
-    payload = json.loads(response.data.decode("utf-8"))
-    items = payload.get("items")
-
-    if items is None:
-        raise RuntimeError(
-            f"Kubernetes GET {path} returned no items"
-        )
-
-    return [
-        api_client.deserialize(
-            SimpleNamespace(
-                data=json.dumps(item).encode("utf-8"),
-            ),
-            model_name,
-        )
-        for item in items
-    ]
 
 
 CATEGORY_WEIGHTS = {
@@ -389,31 +352,13 @@ def _audit_admission(
 def audit_cluster_security() -> dict[str, Any]:
     _load_kubernetes_config()
 
-    api_client = client.ApiClient()
+    core_v1 = client.CoreV1Api()
+    networking_v1 = client.NetworkingV1Api()
 
-    namespaces = _read_raw_list(
-        api_client,
-        "/api/v1/namespaces",
-        "V1Namespace",
-    )
-
-    pods = _read_raw_list(
-        api_client,
-        "/api/v1/pods",
-        "V1Pod",
-    )
-
-    services = _read_raw_list(
-        api_client,
-        "/api/v1/services",
-        "V1Service",
-    )
-
-    policies = _read_raw_list(
-        api_client,
-        "/apis/networking.k8s.io/v1/networkpolicies",
-        "V1NetworkPolicy",
-    )
+    namespaces = core_v1.list_namespace().items
+    pods = core_v1.list_pod_for_all_namespaces().items
+    services = core_v1.list_service_for_all_namespaces().items
+    policies = networking_v1.list_network_policy_for_all_namespaces().items
 
     pods_by_namespace: dict[str, list[Any]] = {}
     policies_by_namespace: dict[str, list[Any]] = {}
