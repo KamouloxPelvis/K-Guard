@@ -125,7 +125,12 @@
       
       <nav class="flex-1 flex flex-col p-4 md:p-2 lg:p-4 space-y-1 mt-2">
         <router-link to="/" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/' ? 'nav-active' : 'nav-inactive'">
-          <span class="text-lg">📊</span>
+          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          </svg>
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">System Overview</span>
             <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">K3s Status & Logs</span>
@@ -133,7 +138,10 @@
         </router-link>
 
         <router-link to="/security" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/security' ? 'nav-active' : 'nav-inactive'">
-          <span class="text-lg">🔒</span>
+          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">Runtime Security</span>
             <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">AI-Enriched Falco Alerts</span>
@@ -146,7 +154,11 @@
           class="nav-link py-2"
           :class="route.path === '/wazuh' ? 'nav-active' : 'nav-inactive'"
         >
-          <span class="text-lg">🖥️</span>
+          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">Endpoint & Compliance</span>
             <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Wazuh Endpoint Posture & Security Insights</span>
@@ -154,7 +166,13 @@
         </router-link>
 
         <router-link to="/sentinel" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/sentinel' ? 'nav-active' : 'nav-inactive'">
-          <span class="text-lg">🌐</span>
+          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">Network Map</span>
             <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Sentinel</span>
@@ -162,7 +180,10 @@
         </router-link>
         
         <router-link to="/settings" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/settings' ? 'nav-active' : 'nav-inactive'">
-          <span class="text-lg">⚙️</span>
+          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
           <div class="flex flex-col md:hidden lg:flex ml-3">
             <span class="text-[10px] font-bold uppercase tracking-widest">Settings</span>
             <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Infra</span>

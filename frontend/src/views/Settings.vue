@@ -169,7 +169,13 @@
         <div class="border border-slate-800 bg-slate-900/30 p-4 rounded-sm flex flex-col md:flex-row gap-6">
           <div class="flex flex-col items-center justify-center min-w-[100px]">
             <div class="w-12 h-12 bg-white/5 rounded-lg flex items-center justify-center mb-2">
-              <span class="text-xl">📡</span>
+              <svg class="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
+                <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path>
+                <circle cx="12" cy="12" r="2"></circle>
+                <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path>
+                <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path>
+              </svg>
             </div>
             <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Webex API</span>
           </div>
