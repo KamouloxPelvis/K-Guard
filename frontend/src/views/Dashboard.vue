@@ -123,85 +123,92 @@
         </span>
       </div>
       
-      <nav class="flex-1 flex flex-col p-4 md:p-2 lg:p-4 space-y-1 mt-2">
-        <router-link to="/" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/' ? 'nav-active' : 'nav-inactive'">
-          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <nav class="flex-1 flex flex-col p-4 md:p-2 lg:p-4 space-y-2 mt-2">
+        <router-link to="/" @click="isMenuOpen = false" class="nav-link py-2.5 px-3 rounded-sm flex items-center transition-all" :class="route.path === '/' ? 'nav-active' : 'nav-inactive text-slate-400 hover:text-slate-200 hover:bg-slate-800/20'">
+          <svg class="w-[18px] h-[18px] shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7" rx="1"></rect>
             <rect x="14" y="3" width="7" height="7" rx="1"></rect>
             <rect x="14" y="14" width="7" height="7" rx="1"></rect>
             <rect x="3" y="14" width="7" height="7" rx="1"></rect>
           </svg>
-          <div class="flex flex-col md:hidden lg:flex ml-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest">System Overview</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">K3s Status & Logs</span>
+          <div class="flex flex-col md:hidden lg:flex ml-3.5">
+            <span class="text-[11.5px] font-bold uppercase tracking-wider text-slate-200">System Overview</span>
+            <span class="text-[8.5px] text-slate-400 font-mono mt-0.5 uppercase tracking-wide">K3s Status & Logs</span>
           </div>
         </router-link>
 
-        <router-link to="/security" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/security' ? 'nav-active' : 'nav-inactive'">
-          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <router-link to="/security" @click="isMenuOpen = false" class="nav-link py-2.5 px-3 rounded-sm flex items-center transition-all" :class="route.path === '/security' ? 'nav-active' : 'nav-inactive text-slate-400 hover:text-slate-200 hover:bg-slate-800/20'">
+          <svg class="w-[18px] h-[18px] shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             <path d="m9 12 2 2 4-4"></path>
           </svg>
-          <div class="flex flex-col md:hidden lg:flex ml-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest">Runtime Security</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">AI-Enriched Falco Alerts</span>
+          <div class="flex flex-col md:hidden lg:flex ml-3.5">
+            <span class="text-[11.5px] font-bold uppercase tracking-wider text-slate-200">Runtime Security</span>
+            <span class="text-[8.5px] text-slate-400 font-mono mt-0.5 uppercase tracking-wide">AI-Enriched Falco Alerts</span>
           </div>
         </router-link>
 
         <router-link
           to="/wazuh"
           @click="isMenuOpen = false"
-          class="nav-link py-2"
-          :class="route.path === '/wazuh' ? 'nav-active' : 'nav-inactive'"
+          class="nav-link py-2.5 px-3 rounded-sm flex items-center transition-all"
+          :class="route.path === '/wazuh' ? 'nav-active' : 'nav-inactive text-slate-400 hover:text-slate-200 hover:bg-slate-800/20'"
         >
-          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="w-[18px] h-[18px] shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
             <line x1="8" y1="21" x2="16" y2="21"></line>
             <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
-          <div class="flex flex-col md:hidden lg:flex ml-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest">Endpoint & Compliance</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Wazuh Endpoint Posture & Security Insights</span>
+          <div class="flex flex-col md:hidden lg:flex ml-3.5">
+            <span class="text-[11.5px] font-bold uppercase tracking-wider text-slate-200">Endpoint & Compliance</span>
+            <span class="text-[8.5px] text-slate-400 font-mono mt-0.5 uppercase tracking-wide">Wazuh Posture & Insights</span>
           </div>
         </router-link>
 
-        <router-link to="/sentinel" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/sentinel' ? 'nav-active' : 'nav-inactive'">
-          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <router-link to="/sentinel" @click="isMenuOpen = false" class="nav-link py-2.5 px-3 rounded-sm flex items-center transition-all" :class="route.path === '/sentinel' ? 'nav-active' : 'nav-inactive text-slate-400 hover:text-slate-200 hover:bg-slate-800/20'">
+          <svg class="w-[18px] h-[18px] shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="18" cy="5" r="3"></circle>
             <circle cx="6" cy="12" r="3"></circle>
             <circle cx="18" cy="19" r="3"></circle>
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
           </svg>
-          <div class="flex flex-col md:hidden lg:flex ml-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest">Network Map</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Sentinel</span>
+          <div class="flex flex-col md:hidden lg:flex ml-3.5">
+            <span class="text-[11.5px] font-bold uppercase tracking-wider text-slate-200">Network Map</span>
+            <span class="text-[8.5px] text-slate-400 font-mono mt-0.5 uppercase tracking-wide">Sentinel Topology</span>
           </div>
         </router-link>
         
-        <router-link to="/settings" @click="isMenuOpen = false" class="nav-link py-2" :class="route.path === '/settings' ? 'nav-active' : 'nav-inactive'">
-          <svg class="w-4 h-4 shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <router-link to="/settings" @click="isMenuOpen = false" class="nav-link py-2.5 px-3 rounded-sm flex items-center transition-all" :class="route.path === '/settings' ? 'nav-active' : 'nav-inactive text-slate-400 hover:text-slate-200 hover:bg-slate-800/20'">
+          <svg class="w-[18px] h-[18px] shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
-          <div class="flex flex-col md:hidden lg:flex ml-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest">Settings</span>
-            <span class="text-[7px] text-slate-500 font-mono mt-0.5 uppercase">Infra</span>
+          <div class="flex flex-col md:hidden lg:flex ml-3.5">
+            <span class="text-[11.5px] font-bold uppercase tracking-wider text-slate-200">Settings</span>
+            <span class="text-[8.5px] text-slate-400 font-mono mt-0.5 uppercase tracking-wide">Infra & Storage</span>
           </div>
         </router-link>
 
         <div class="flex-1"></div>  
       </nav>
 
-      <div class="hidden lg:block p-4 border-t border-slate-800/50 bg-[#0a0b0e]">
-        <div class="flex items-center gap-3 mb-1">
-            <p class="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-2">
-              <span class="w-1 h-1 bg-green-500 rounded-full animate-pulse"></span>
-              User: <span class="text-[#f05a28] font-bold">{{ username }}</span>
-            </p>
+      <div class="hidden lg:block p-4 border-t border-slate-800/80 bg-[#0e1117]">
+        <div class="flex items-center gap-2 mb-2.5">
+          <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0"></span>
+          <span class="text-[9.5px] text-slate-400 font-mono uppercase tracking-wider">USER:</span>
+          <span class="text-[11px] text-[#f05a28] font-bold tracking-wide truncate">{{ username }}</span>
         </div>
-        <div class="text-[9px] text-slate-600 font-mono break-all leading-tight uppercase"> 
-          {{ systemData ? `${systemData.cluster_version} // ${systemData.vps_os}` : 'Loading...' }}
+        
+        <div class="space-y-1.5 pt-2 border-t border-slate-800/50">
+          <div class="flex items-center justify-between text-[9.5px] font-mono">
+            <span class="text-slate-500 uppercase">Cluster</span>
+            <span class="text-slate-300 font-medium">{{ systemData ? systemData.cluster_version : 'v1.31.2+k3s1' }}</span>
+          </div>
+          <div class="flex items-center justify-between text-[9.5px] font-mono">
+            <span class="text-slate-500 uppercase">OS</span>
+            <span class="text-slate-300 font-medium">{{ systemData ? systemData.vps_os : 'Debian GNU/Linux 12' }}</span>
+          </div>
         </div>
       </div>
     </aside>
