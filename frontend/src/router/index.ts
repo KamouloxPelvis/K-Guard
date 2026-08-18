@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isDemoMode } from '@/services/api'
 import Dashboard from '../views/Dashboard.vue'
 import HealthView from '../views/HealthView.vue'
 import SecurityView from '../views/SecurityView.vue'
@@ -61,6 +62,18 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
+  if (isDemoMode) {
+    if (!localStorage.getItem('user_token')) {
+      localStorage.setItem('user_token', 'kguard_demo_read_only_token')
+    }
+    if (to.name === 'Login') {
+      next({ name: 'Health' })
+      return
+    }
+    next()
+    return
+  }
+
   const token = localStorage.getItem('user_token')
 
   if (to.meta.requiresAuth && !token) {

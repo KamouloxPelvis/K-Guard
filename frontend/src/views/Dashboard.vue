@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import api from '@/services/api';
+  import api, { isDemoMode } from '@/services/api';
 
   interface SystemInfo {
     cluster_version: string;
@@ -186,6 +186,23 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-h-0 overflow-y-auto">
+      <div v-if="isDemoMode" class="bg-gradient-to-r from-[#f05a28]/20 via-amber-500/10 to-[#f05a28]/20 border-b border-[#f05a28]/40 px-4 py-1.5 flex items-center justify-between text-xs text-slate-200 z-[60] backdrop-blur-md shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#f05a28]/30 border border-[#f05a28]/50 text-[10px] font-bold text-[#f05a28] uppercase tracking-wider">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+            Démo Interactive
+          </span>
+          <span class="text-slate-300 text-[11px] hidden sm:inline">
+            K-Guard v1.7.0 en mode consultation (données Falco eBPF, Wazuh & Network Sentinel simulées — lecture seule)
+          </span>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="https://devopsnotes.org" target="_blank" class="text-[11px] text-[#f05a28] hover:underline flex items-center gap-1 font-semibold">
+            ← Portfolio
+          </a>
+        </div>
+      </div>
+
       <div class="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
         <div class="w-[400px] h-[400px] border border-blue-500/5 rounded-full absolute"></div>
         <img src="/logo_background.png" alt="K-Guard" class="w-[350px] opacity-[0.05] pointer-events-none select-none" />
@@ -208,11 +225,14 @@
                     </span>
                     K3s Cloud online
                 </span>
-                <span class="text-[9px] text-slate-600 font-mono mt-0.5 uppercase">Latency: {{ systemLatency }}ms</span>
+                <span class="text-[9px] text-slate-600 font-mono mt-0.5 uppercase">Latency: {{ isDemoMode ? '12' : systemLatency }}ms</span>
             </div>
-            <button @click="handleLogout" class="group flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-[#f05a28] px-3 py-1.5 rounded-sm transition-all duration-300 cursor-pointer">
+            <button v-if="!isDemoMode" @click="handleLogout" class="group flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-[#f05a28] px-3 py-1.5 rounded-sm transition-all duration-300 cursor-pointer">
               <span class="text-[10px] text-[#f05a28] font-bold uppercase tracking-tighter">LogOut</span>
-          </button>
+            </button>
+            <div v-else class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-sm">
+              <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Mode Invité</span>
+            </div>
         </div>
       </header>
 
