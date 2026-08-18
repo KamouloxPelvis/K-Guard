@@ -14,20 +14,9 @@ spec:
   tls:
   - hosts:
     - k-guard.devopsnotes.org
-    - app.devopsnotes.org
     secretName: kguard-tls
   rules:
   - host: k-guard.devopsnotes.org
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: k-guard-service
-            port:
-              number: 8000
-  - host: app.devopsnotes.org
     http:
       paths:
       - path: /
