@@ -99,6 +99,9 @@ jobs:
             -n "$TARGET_NS" \
             --timeout=300s
 
+          echo "Applying Ingress routing for k-guard.devopsnotes.org:"
+          kubectl apply -f k8s/core/ingress.yaml
+
           echo "Current deployed image:"
           kubectl get deployment "$DEPLOY_NAME" -n "$TARGET_NS" \
             -o jsonpath='{.spec.template.spec.containers[*].image}'
