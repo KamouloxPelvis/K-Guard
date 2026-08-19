@@ -6,7 +6,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from backend import database
 from backend.network_manager import router as network_router
@@ -59,30 +61,21 @@ async def api_heartbeat():
     return {"status": "online", "message": "K-Guard API is reachable"}
 
 
+class SPAStaticFiles(StaticFiles):
+    """
+    Static files handler providing SPA fallback to index.html for client-side routing.
+    Delegates all path traversal prevention and static file resolution to Starlette.
+    """
+    async def get_response(self, path: str, scope: Scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 404:
+            response = await super().get_response("index.html", scope)
+        return response
+
+
 BASE_STATIC_DIR = os.path.abspath("/app/static")
-
-
-@app.get("/{rest_of_path:path}", tags=["Frontend"])
-async def serve_frontend(rest_of_path: str):
-    """
-    Serves the Single Page Application while preventing path traversal.
-    """
-    # Sanitize and resolve target path safely
-    safe_rel_path = os.path.normpath(rest_of_path).lstrip(r"\/.")
-    target_path = os.path.abspath(os.path.join(BASE_STATIC_DIR, safe_rel_path))
-
-    # Verify that the target path is strictly inside BASE_STATIC_DIR
-    if os.path.commonpath([BASE_STATIC_DIR, target_path]) != BASE_STATIC_DIR:
-        return JSONResponse(
-            status_code=403,
-            content={"error": "Security Violation: Invalid Path"},
-        )
-
-    if os.path.isfile(target_path):
-        return FileResponse(path=target_path)
-
-    index_path = os.path.join(BASE_STATIC_DIR, "index.html")
-    return FileResponse(path=index_path)
+if os.path.isdir(BASE_STATIC_DIR):
+    app.mount("/", SPAStaticFiles(directory=BASE_STATIC_DIR, html=True), name="spa")
 
 
 @app.middleware("http")
