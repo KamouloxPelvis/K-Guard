@@ -1,7 +1,8 @@
 import os
 import bcrypt
 from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError, ExpiredSignatureError
 from fastapi import APIRouter, HTTPException, Depends, status, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from dotenv import load_dotenv
@@ -50,12 +51,12 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Security(secu
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except jwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Token has expired"
         )
-    except (JWTError, Exception):
+    except (PyJWTError, Exception):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Signature error or invalid token"
