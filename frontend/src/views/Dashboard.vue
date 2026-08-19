@@ -218,10 +218,10 @@
         <div class="flex items-center gap-2">
           <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#f05a28]/30 border border-[#f05a28]/50 text-[10px] font-bold text-[#f05a28] uppercase tracking-wider">
             <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-            Démo Interactive
+            Interactive Demo
           </span>
           <span class="text-slate-300 text-[11px] hidden sm:inline">
-            K-Guard v1.7.0 en mode consultation (données Falco eBPF, Wazuh & Network Sentinel simulées — lecture seule)
+            K-Guard v1.7.0 live demo mode (simulated Falco eBPF, Wazuh & Network Sentinel telemetry — read-only)
           </span>
         </div>
         <div class="flex items-center gap-3">

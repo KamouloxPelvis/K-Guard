@@ -131,19 +131,19 @@ export const demoSecurityAlerts = [
       incident_type: "COMMAND_AND_CONTROL",
       risk_level: "CRITICAL",
       confidence_score: 96,
-      human_summary: "Un conteneur a tenté d'initier un flux sortant vers une IP classée malveillante. Le flux a été immédiatement intercepté et neutralisé par les NetworkPolicies de K-Guard.",
+      human_summary: "Container attempted to establish an outbound connection to a flagged C2 IP. Egress was immediately intercepted and neutralized by K-Guard NetworkPolicies.",
       analyst_summary: "Suspicious egress attempt from pod namespace 'staging' targeting port 4444. MITRE ATT&CK T1071 (Application Layer Protocol). Connection dropped at kernel level.",
       investigation_steps: [
-        "Vérification de l'image de conteneur d'origine et hash SHA-256",
-        "Isolation réseau complète du namespace concerné",
-        "Analyse de mémoire résiduelle via le module eBPF"
+        "Verify source container image SHA-256 digest",
+        "Enforce complete network isolation on target namespace",
+        "Perform memory forensics via eBPF runtime probe"
       ],
       iocs: ["198.51.100.44:4444 (Mock C2)", "Process: /bin/nc.traditional"],
-      hypotheses: ["Tentative de reverse shell suite à une injection de commande", "Scan automatisé de sonde externe"],
+      hypotheses: ["Reverse shell attempt following remote code execution", "Automated external reconnaissance probe"],
       recommended_actions: [
-        "Maintenir le blocage du trafic sortant (Network Sentinel)",
-        "Rotation des secrets du namespace",
-        "Redémarrage du pod avec image immuable vérifiée"
+        "Maintain egress traffic lockdown (Network Sentinel)",
+        "Rotate namespace secrets and credentials",
+        "Restart pod with verified immutable container image"
       ]
     }
   },
@@ -162,18 +162,18 @@ export const demoSecurityAlerts = [
       incident_type: "EXECUTION",
       risk_level: "HIGH",
       confidence_score: 88,
-      human_summary: "Ouverture d'un shell interactif à l'intérieur d'un pod de production. Action suspecte nécessitant validation opérateur.",
+      human_summary: "Interactive terminal shell spawned inside a production pod. Suspicious operational activity requiring immediate verification.",
       analyst_summary: "Interactive shell invocation detected in production namespace. Parent process: containerd-shim. MITRE ATT&CK T1059.004 (Unix Shell).",
       investigation_steps: [
-        "Identifier l'identité RBAC ayant exécuté kubectl exec",
-        "Auditer l'historique des commandes saisies dans la session",
-        "Contrôler l'intégrité des fichiers modifiés"
+        "Identify RBAC identity executing kubectl exec",
+        "Audit interactive command history in container session",
+        "Verify filesystem integrity for modified binaries"
       ],
       iocs: ["User: cluster-admin", "Command: /bin/sh -i"],
-      hypotheses: ["Opération de maintenance non déclarée", "Élévation de privilèges locale"],
+      hypotheses: ["Undeclared hotfix or maintenance session", "Local privilege escalation attempt"],
       recommended_actions: [
-        "Restreindre les permissions 'exec' via RBAC",
-        "Vérifier le journal d'audit Kubernetes API"
+        "Restrict pod exec privileges via RBAC policies",
+        "Audit Kubernetes API control plane logs"
       ]
     }
   },
@@ -192,17 +192,17 @@ export const demoSecurityAlerts = [
       incident_type: "CREDENTIAL_ACCESS",
       risk_level: "HIGH",
       confidence_score: 91,
-      human_summary: "Tentative de lecture d'un fichier système sensible (/etc/shadow). L'accès a été rejeté par les permissions de sécurité du conteneur.",
+      human_summary: "Unauthorized attempt to read sensitive system file (/etc/shadow). Access was rejected by container security boundary.",
       analyst_summary: "Unauthorized file read attempt intercepted by AppArmor/SELinux profile. MITRE ATT&CK T1003.008 (/etc/passwd and /etc/shadow).",
       investigation_steps: [
-        "Vérifier les capacités Linux (Capabilities) du conteneur",
-        "Inspecter les variables d'environnement exposées"
+        "Review Linux capabilities assigned to container",
+        "Inspect exposed environment variables for secrets"
       ],
       iocs: ["Target: /etc/shadow", "Process: cat"],
-      hypotheses: ["Tentative de découverte locale des identifiants"],
+      hypotheses: ["Local credential harvesting attempt"],
       recommended_actions: [
-        "Forcer le SecurityContext runAsNonRoot: true",
-        "Activer le profil AppArmor kguard-default"
+        "Enforce runAsNonRoot: true in SecurityContext",
+        "Attach default kguard AppArmor/SELinux profile"
       ]
     }
   },
@@ -221,12 +221,12 @@ export const demoSecurityAlerts = [
       incident_type: "DISCOVERY",
       risk_level: "MEDIUM",
       confidence_score: 75,
-      human_summary: "Énumération des namespaces par une sonde de métrologie Prometheus autorisée. Faux positif confirmé après corrélation.",
+      human_summary: "Namespace enumeration performed by authorized Prometheus monitoring probe. False positive confirmed after security correlation.",
       analyst_summary: "Routine service account API call from prometheus-server. Access verified against RBAC RoleBinding.",
-      investigation_steps: ["Vérifier la correspondance du ServiceAccount token"],
+      investigation_steps: ["Verify ServiceAccount token against RBAC RoleBinding"],
       iocs: ["SA: monitoring:prometheus-k8s"],
-      hypotheses: ["Comportement légitime de métrologie"],
-      recommended_actions: ["Ajouter une exception de règle Falco pour le SA Prometheus"]
+      hypotheses: ["Legitimate metric scraping behavior"],
+      recommended_actions: ["Add Falco rule exception macro for Prometheus SA"]
     }
   },
   {
@@ -244,12 +244,12 @@ export const demoSecurityAlerts = [
       incident_type: "DEFENSE_EVASION",
       risk_level: "LOW",
       confidence_score: 82,
-      human_summary: "Appel du gestionnaire de paquets dans un conteneur en cours d'exécution. Violation de la politique d'immuabilité.",
+      human_summary: "Package manager execution detected in running container. Violation of container immutability policy.",
       analyst_summary: "Execution of /usr/bin/apt-get in running workload. Violates container immutability principles.",
-      investigation_steps: ["Contrôler le Dockerfile d'origine"],
+      investigation_steps: ["Audit base Dockerfile layer composition"],
       iocs: ["Process: apt-get update"],
-      hypotheses: ["Installation manuelle d'outils de debug en cours d'exécution"],
-      recommended_actions: ["Activer 'readOnlyRootFilesystem: true' dans le PodSpec"]
+      hypotheses: ["Manual installation of debugging tools in live workload"],
+      recommended_actions: ["Set readOnlyRootFilesystem: true in PodSpec"]
     }
   }
 ];
@@ -338,7 +338,7 @@ export const demoWazuhOverview = {
   posture: {
     sca_available: true,
     vulnerabilities_available: true,
-    message: "Système conforme aux benchmarks CIS Kubernetes v1.8.0. 0 vulnérabilité critique active."
+    message: "System compliant with CIS Kubernetes v1.8.0 benchmarks. 0 active critical vulnerabilities."
   }
 };
 
