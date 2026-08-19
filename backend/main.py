@@ -59,7 +59,7 @@ async def api_heartbeat():
     return {"status": "online", "message": "K-Guard API is reachable"}
 
 
-BASE_STATIC_DIR = Path("/app/static").resolve()
+BASE_STATIC_DIR = os.path.abspath("/app/static")
 
 
 @app.get("/{rest_of_path:path}", tags=["Frontend"])
@@ -67,28 +67,22 @@ async def serve_frontend(rest_of_path: str):
     """
     Serves the Single Page Application while preventing path traversal.
     """
-    requested_path = os.path.normpath(rest_of_path)
+    # Sanitize and resolve target path safely
+    safe_rel_path = os.path.normpath(rest_of_path).lstrip(r"\/.")
+    target_path = os.path.abspath(os.path.join(BASE_STATIC_DIR, safe_rel_path))
 
-    if requested_path.startswith("..") or requested_path.startswith("/"):
+    # Verify that the target path is strictly inside BASE_STATIC_DIR
+    if os.path.commonpath([BASE_STATIC_DIR, target_path]) != BASE_STATIC_DIR:
         return JSONResponse(
             status_code=403,
             content={"error": "Security Violation: Invalid Path"},
         )
 
-    candidate_path = (BASE_STATIC_DIR / requested_path).resolve()
+    if os.path.isfile(target_path):
+        return FileResponse(path=target_path)
 
-    try:
-        candidate_path.relative_to(BASE_STATIC_DIR)
-    except ValueError:
-        return JSONResponse(
-            status_code=403,
-            content={"error": "Security Violation: Access Denied"},
-        )
-
-    if candidate_path.is_file():
-        return FileResponse(path=candidate_path)
-
-    return FileResponse(path=(BASE_STATIC_DIR / "index.html").resolve())
+    index_path = os.path.join(BASE_STATIC_DIR, "index.html")
+    return FileResponse(path=index_path)
 
 
 @app.middleware("http")
