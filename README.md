@@ -15,8 +15,8 @@
 
 ### 🔗 Quick Links
 
-- 🚀 **Live Demo:** [https://app.devopsnotes.org](https://app.devopsnotes.org)
-- 🌐 **Author Portfolio:** [https://devopsnotes.org](https://devopsnotes.org)
+- 🚀 **Live Demo:** [https://k-guard.devopsnotes.org](https://k-guard.devopsnotes.org)
+- 🌐 **Author Portfolio:** [https://kamal-guidadou.org](https://devopsnotes.org)
 - 📖 **Technical Blog:** [https://blog.devopsnotes.org](https://blog.devopsnotes.org)
 - 📑 **Architecture Dossier (PDF):** [Dossier de Conception Technique v1.7.0](https://devopsnotes.org/docs/Dossier_de_conception_technique_K-Guard_v1.7.0.pdf)
 
