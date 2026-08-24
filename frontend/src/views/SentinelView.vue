@@ -514,8 +514,8 @@ interface SentinelStatusResponse {
       <!-- Header + controls -->
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
         <div class="xl:col-span-3 bg-[#111217] border border-slate-800/60 rounded-sm p-5">
-          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div class="space-y-1">
+          <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div class="space-y-1.5">
 
               <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em]">
                 Automated Micro-segmentation
@@ -527,14 +527,14 @@ interface SentinelStatusResponse {
 
                 <span
                   v-if="isHardened"
-                  class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+                  class="px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
                 >
                   Policies Active
                 </span>
 
                 <span
                   v-else
-                  class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-amber-500/40 bg-amber-500/10 text-amber-400"
+                  class="px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-amber-500/40 bg-amber-500/10 text-amber-400"
                 >
                   Unhardened
                 </span>
