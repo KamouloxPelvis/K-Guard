@@ -513,32 +513,30 @@ interface SentinelStatusResponse {
     <div class="p-4 lg:p-6 relative z-10 font-sans h-full overflow-y-auto custom-scrollbar">
       <!-- Header + controls -->
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
-        <div class="xl:col-span-3 bg-[#111217] border border-slate-800/60 rounded-sm p-5">
+        <div class="xl:col-span-3 bg-[#111217] border border-slate-800/60 rounded-sm p-5 space-y-2.5">
+          <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em]">
+            Automated Micro-segmentation
+          </p>
+
           <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div class="space-y-1">
+            <div class="flex items-center gap-3 flex-wrap">
+              <h2 class="text-lg font-black text-white uppercase tracking-tighter">
+                Network Sentinel <span class="text-blue-500">v2.0</span>
+              </h2>
 
-              <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em]">
-                Automated Micro-segmentation
-              </p>
-              <div class="flex items-center gap-3 flex-wrap">
-                <h2 class="text-lg font-black text-white uppercase tracking-tighter">
-                  Network Sentinel <span class="text-blue-500">v2.0</span>
-                </h2>
+              <span
+                v-if="isHardened"
+                class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+              >
+                Policies Active
+              </span>
 
-                <span
-                  v-if="isHardened"
-                  class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                >
-                  Policies Active
-                </span>
-
-                <span
-                  v-else
-                  class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-amber-500/40 bg-amber-500/10 text-amber-400"
-                >
-                  Unhardened
-                </span>
-              </div>
+              <span
+                v-else
+                class="px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.25em] rounded-sm border border-amber-500/40 bg-amber-500/10 text-amber-400"
+              >
+                Unhardened
+              </span>
             </div>
 
             <div class="flex flex-wrap items-center gap-3">

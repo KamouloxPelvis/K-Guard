@@ -17,15 +17,26 @@ const BASE_URL = '/api';
 
 export const isDemoMode = (() => {
   if (typeof window === 'undefined') return false;
+
+  // 1. Explicit overrides via query parameter
+  if (window.location.search.includes('live=true')) return false;
+  if (window.location.search.includes('demo=true')) return true;
+
+  // 2. Local and internal environments (.local, localhost) are REAL LIVE APP
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
+    return import.meta.env.VITE_DEMO_MODE === 'true';
+  }
+
+  // 3. Public showcase domain (k-guard.devopsnotes.org) runs in DEMO mode
   return (
     import.meta.env.VITE_DEMO_MODE === 'true' ||
-    window.location.hostname.includes('k-guard') ||
-    window.location.hostname.includes('demo') ||
-    window.location.search.includes('demo=true')
+    host.includes('devopsnotes.org') ||
+    host.includes('demo')
   );
 })();
 
-// Auto-initialize demo credentials in local storage if in demo mode
+// Auto-initialize demo credentials in local storage ONLY in demo mode
 if (isDemoMode && typeof window !== 'undefined') {
   if (!localStorage.getItem('user_token')) {
     localStorage.setItem('user_token', 'kguard_demo_read_only_token');
@@ -34,6 +45,7 @@ if (isDemoMode && typeof window !== 'undefined') {
     localStorage.setItem('admin_username', 'Recruteur / Démo Publique');
   }
 }
+
 
 /**
  * Handle mock API responses in Demo Mode
