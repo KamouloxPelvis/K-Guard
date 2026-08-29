@@ -66,58 +66,29 @@ jobs:
 
   deploy_to_k3s:
     needs: build_images
-    runs-on: [self-hosted]
-    environment: VPS_KAMATERA_UBUNTU_THINKPAD_e11
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy Application
-        env:
-          KUBECONFIG: ${{ github.workspace }}/kubeconfig.yaml
-          IMAGE: ghcr.io/kamouloxpelvis/kguard-app:${{ github.sha }}
-        run: |
-          set -euo pipefail
-
-          cp /etc/rancher/k3s/k3s.yaml "$KUBECONFIG"
-          chmod 600 "$KUBECONFIG"
-
-          TARGET_NS="k-guard"
-          DEPLOY_NAME="kguard-deployment"
-          CONTAINER_NAME="kguard-app"
-
-          echo "Deploying image: $IMAGE"
-          echo "Namespace: $TARGET_NS"
-          echo "Deployment: $DEPLOY_NAME"
-          echo "Container: $CONTAINER_NAME"
-
-          kubectl set image deployment/"$DEPLOY_NAME" \
-            "$CONTAINER_NAME"="$IMAGE" \
-            -n "$TARGET_NS"
-
-          kubectl rollout status deployment/"$DEPLOY_NAME" \
-            -n "$TARGET_NS" \
-            --timeout=300s
-
-          echo "Applying Ingress routing for k-guard.devopsnotes.org:"
-          kubectl apply -f k8s/core/ingress.yaml
-
-          echo "Current deployed image:"
-          kubectl get deployment "$DEPLOY_NAME" -n "$TARGET_NS" \
-            -o jsonpath='{.spec.template.spec.containers[*].image}'
-          echo
+      - name: Deploy to K3s via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "🚀 Updating kguard-app image to SHA: ${{ github.sha }}..."
+            sudo kubectl set image deployment/kguard-deployment \
+              kguard-app=ghcr.io/kamouloxpelvis/kguard-app:${{ github.sha }} -n k-guard
+            sudo kubectl rollout status deployment/kguard-deployment -n k-guard --timeout=300s
 
       - name: Discord Notification
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          set -euo pipefail
-
           if [ "${{ job.status }}" = "success" ]; then
-            MESSAGE="🛡️ K-GUARD: Deployment successful - SHA ${{ github.sha }} is live."
+            MESSAGE="🛡️ K-GUARD: Deployment successful - SHA ${{ github.sha }} is live. ✅"
           else
-            MESSAGE="⚠️ K-GUARD: Deployment failure - SHA ${{ github.sha }}."
+            MESSAGE="⚠️ K-GUARD: Deployment failure - SHA ${{ github.sha }}. ❌"
           fi
 
           curl -X POST \

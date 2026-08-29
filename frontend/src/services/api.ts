@@ -29,10 +29,14 @@ export const isDemoMode = (() => {
   }
 
   // 3. Public showcase domain (k-guard.devopsnotes.org) runs in DEMO mode
+  const isDevopsnotesHost = host === 'devopsnotes.org' || host.endsWith('.devopsnotes.org');
+  const hostLabels = host.split('.');
+  const hasDemoLabel = hostLabels.some((label) => label === 'demo' || label.startsWith('demo-') || label.endsWith('-demo'));
+
   return (
     import.meta.env.VITE_DEMO_MODE === 'true' ||
-    host.includes('devopsnotes.org') ||
-    host.includes('demo')
+    isDevopsnotesHost ||
+    hasDemoLabel
   );
 })();
 
